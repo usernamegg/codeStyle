@@ -1,0 +1,1376 @@
+
+(function (window, z, plugin, $, undefined) {
+	if (z && plugin && !plugin.MapComPlugin) {
+		z.setMembers(plugin, {
+			MapComPlugin: function () {
+				plugin.BasePlugin.apply(this, arguments);
+			}
+		});
+		z.inherit(plugin.BasePlugin, plugin.MapComPlugin, {
+			// 初始化图层
+			loadMapSuccess: function () {				
+				var $this = this;
+	 	 		$(".tool-container>ul>li").hover(function(){
+ 	 				$(this).children("div").addClass("active");
+ 	 				var ul = $(this).children("ul");
+ 					if(ul.is("#layersul")){
+ 						ul.empty();						
+ 						$.each(layerOptions,function(i,e){
+							ul.append(makeLi(e));
+						});
+ 					}
+ 					function makeLi(options){
+	 					var layer = mapPlugin.graphicsLayers[options.name];
+ 						var div = $("<div/>").html(options.text);
+ 						div.click(function(){
+ 							// 警情图层点击方法
+ 							var layerName = $(this).children("input").val();
+ 							// 判断是否是警情图层
+ 							if (layerName && layerName == "jjdPointLayer") {
+ 								// 判断警情图层是否选中
+ 								if ($(this).children("input").prop("checked")) {
+ 									zMapComPlugin.showJjdSelectView();
+ 								} else {
+ 									$(this).children("input").click();
+ 								}
+ 							} else {
+ 								$(this).children("input").click();
+ 							}
+ 						});
+ 						var input = $("<input type=\"checkbox\" name=\"layers\" value=\""+options.name+"\"/>");
+ 						input.click(function(e){
+ 							e.stopPropagation();
+ 							layer = mapPlugin.graphicsLayers[options.name];						
+ 							var flag = this.checked;  
+ 							if(flag){
+ 								this.checked = true;							
+								 var circle=mapPlugin.graphicsLayers["jjplace"]; 
+								 var circleLayer=circle.graphics; 
+								 if(circleLayer.length>0){ 
+									 var x=circleLayer[0].geometry.center.x; 
+									 var y=circleLayer[0].geometry.center.y;
+									 var radius=Number(circleLayer[0].geometry.radius); 
+									 var circleRound = new esri.geometry.Circle({center: [x,y],radius: radius });
+									 var _data={ 
+											 "lonMax":circleLayer[0]._extent.xmax,
+											 "lonMin":circleLayer[0]._extent.xmin,
+											 "latMax":circleLayer[0]._extent.ymax,
+											 "latMin":circleLayer[0]._extent.ymin 
+											 } 								
+									 var videoLayer = window.layerOptions[6]; 
+									 zMclPlugin.videoPoint(videoLayer,circleRound,_data)
+									/* return; */
+								 }
+								
+ 								
+							if(layer){
+ 									if (options.name == "jjdPointLayer") {
+ 										zMapComPlugin.showJjdSelectView();
+ 									} else if (options.name == "vedioPointLayer") {										
+ 										$this.getMapPoint.apply(window,[options,options.success]);
+ 									}else {
+ 										layer.show();
+ 									}
+ 								}else{
+ 									if (options.name == "jjdPointLayer") {
+ 										zMapComPlugin.showJjdSelectView();
+ 									} else if (options.name == "vedioPointLayer") {
+ 										$this.getMapPoint.apply(window,[options,options.success]);
+ 									} else {
+ 										$this.getMapPoint.apply(window,[options,options.success]);
+ 									}
+ 								}
+ 							}else{
+ 								this.checked = false;
+ 								if(layer && layer.visible){
+ 									if (options.name == "jjdPointLayer" || options.name == "vedioPointLayer") {
+ 										mapPlugin.removeGraphics("jjdPointLayer");
+ 										mapPlugin.removeGraphics("vedioPointLayer");
+ 										layer.hide();
+ 									}else {
+ 										layer.hide();
+ 									}
+ 								}
+ 							}
+ 						});
+ 						if(layer && layer.visible){
+ 							input.attr("checked",true);
+ 						}
+ 						var li = $("<li/>").append(div.prepend(input));
+ 						return li;
+ 					}
+ 					ul.stop().slideDown();
+ 	 				$(this).children("div").children("i.show").hide();
+ 	 				$(this).children("div").children("i.hide").show();
+ 	 	 		},function(){
+ 	 				$(this).children("div").removeClass("active");
+ 	 				$(this).children("ul").stop().slideUp();
+ 	 				$(this).children("div").children("i.show").show();
+ 	 				$(this).children("div").children("i.hide").hide();
+ 	 	 		});
+	 	 		$(".tool-container .measure").click(function(){
+	 	 			var type = $(this).data("type");
+	 	 			if(type){
+	 	 				zMclPlugin.setMeasure(type, "#measureLi");
+	 	 			}
+	 	 		});
+	 	 		$(".tool-container .seach").click(function(){
+	 	 			var type = $(this).data("type");
+	 	 			if(type){
+	 	 				var pointLayer=["vedioPointLayer"];
+						zMclPlugin.seachMeasure(type,this, pointLayer,callback);
+	 	 			}
+	 	 			function callback(pointid) {
+	 	 				var div=$("#vedio_choose");
+						// 清除死数据
+						con=div.find("#bodylist");
+						con.empty();
+						// 加载选择数据
+						if (pointid.vedioPointLayer) {
+							vedioChoose(pointid.vedioPointLayer);
+						}
+						// 投屏
+						div.find(".vedio-choose-throw").off("click").click(function(){								 							 							 
+							 	 var arr=[];
+								 var checkInput = con.find("input:checkbox[name='hpgId']:checked").each(function () { 
+									 var val = $(this).val();
+									return arr.push(val);
+									 });															 
+								 /*
+									 * function GetRequest() { var url = location.search; // 获取url中"?"符后的字串 var theRequest = new Object(); if (url.indexOf("?") != -1) { var str = url.substr(1); strs = str.split("&"); for(var i = 0; i < strs.length; i ++) { theRequest[strs[i].split("=")[0]]=unescape(strs[i].split("=")[1]); } } return theRequest; }
+									 */
+								 	/*
+									 * var Request=GetRequest(); var sp=Request["sp"]; var arr2=sp.split(','); console.log(arr2); var alllist= localStorage.getItem("alllist"); var _alllist=JSON.parse(alllist); var maxr=localStorage.getItem("strx"); var maxt=localStorage.getItem("stry"); console.log("localx----"+maxr); console.log("localy----"+maxt); console.log(_alllist);
+									 */
+								    /*
+									 * if(sp == ""){ var _url = window.WEB_ROOT_PATH+"/vedio/PushBigScreenNew.do"; var _data = { "videoCode" :arr.join(","), "LeftList":_alllist.leftlist, "RightList":_alllist.rightlist, "BottomList":_alllist.bottomlist, "TopList":_alllist.toplist, "MaxRight":maxr, "MaxBottom":maxt } }else{ var _url = window.WEB_ROOT_PATH+"/vedio/PushBigScreen.do"; var _data = { "videoCode" :arr.join(","), "videoNum":arr.length, "videoWidth":arr2[0], "videoLength":arr2[1] } }
+									 */
+								 var _data = {"videoCode" :arr.join(",")};
+								 jQuery.ajax({
+								       url: window.WEB_ROOT_PATH+"/vedio/PushBigScreen.do",// videoWidth videoLength
+								       type: "POST",
+								       async:false,
+								       cache:false,
+								       data:{"videoCode" :arr.join(",")},       
+								       success:function(data) {
+								    	   var _data = JSON.parse(data);
+								    	   if(_data.Error==2){
+								    			alert("登入失败");
+								    		};								           
+								       },
+								       error: function (data) {
+							                 
+							           }
+								    });
+							
+							 /*
+								 * if (checkInput.length > 9) { alert("投屏中..." + checkInput.length); } else { alert("投屏中..." + checkInput.length); }
+								 */
+							 							
+							/*
+							 * $.ajax({ type: "POST", url: "http://10.12.6.60:12138/Server.ashx?Action=login", dataType: "jsonp", jsonp: "callback",
+							 * 
+							 * success: function(data){ alert(success); }, error: function(data){ alert(success); } });
+							 */
+						});
+						div.find(".vedio-choose-close").off("click").click(function(){
+							hook.mapPlugin.removeGraphics("selectLayer");
+							div.dialog("close");
+						});
+						div.dialog("open");
+	 	 			}
+	 	 			
+	 	 			// 加载选择视频数据
+					function vedioChoose(pointid){
+						var div=$("#vedio_choose");
+						con=div.find("#bodylist");
+						var number = 1;
+						for(var i=0,l=pointid.length;i<l;i++){
+							
+							var mar = pointid[i];
+							// 判断name，code，monitorBrandCode是否为undefined(排除标题点)
+							if (typeof(mar.name) != "undefined" && typeof(mar.code) != "undefined" && typeof(mar.monitorBrandCode) != "undefined" && typeof(mar.lon) != "undefined" && typeof(mar.lat) != "undefined") {
+								var htm = $("<div/>").addClass("bodylist")
+								.append($("<div/>").addClass("num fl").html(number++))
+								.append($("<div/>").addClass("checkbox fl").html('<input type="checkbox" value="' + mar.hpgId + '" name="hpgId" brand="' + mar.monitorBrandCode + '" onclick="checkclick(this);"><input type="hidden" value="' + mar.lon + '" name="lon"><input type="hidden" value="' + mar.lat + '" name="lat">'))
+								.append($("<div/>").addClass("text_name fl").html(mar.name))
+								.append($("<div/>").addClass("num_shebei fl").html(mar.monitorBrandCode.replace("channel-brand-", "") == "hk" ? "海康" : (mar.monitorBrandCode.replace("channel-brand-", "") == "ys" ? "宇视" : "")));
+								con.append(htm);
+							}
+						}
+					}
+	 	 		});
+	 	 		$("#mapControl").hover(function(){
+	 	 			var children = $(this).children().not(".active");
+	 	 			children.each(function(){
+	 	 				$(this).click(function(){
+	 	 					mapPlugin.setGbLayers(Number($(this).data("basemap")));
+	 	 		 			$(this).siblings().removeClass("active");
+	 	 		 			$(this).addClass("active");
+	 	 				});
+	 	 				$(this).stop().animate({width:"120px"});
+	 	 			});
+	 	 		},function(){
+	 	 			$(this).children().off("click");
+	 	 			var children = $(this).children().not(".active");
+	 	 			children.each(function(){
+	 	 				$(this).stop().animate({width:"10px"});
+	 	 			});
+	 	 		});
+
+				$("#rcmc_1").tabs({
+					onSelect:function(title,index){
+						var panel = $(this).tabs("getTab",index);
+						panel.find("[id$='Reasult']").resize();
+					}
+				});
+	 	 		$this.cerSsCount();
+	 	 		mapPlugin.mapObj.on("extent-change", changeHandler);
+	 	 		function changeHandler () {
+	 	 			// 根据缩放级别显示电子围栏
+	 	 			var layer = mapPlugin.graphicsLayers["electronicFence"];
+ 	 				if (layer) {
+ 	 					if (mapPlugin.mapObj.getZoom() <= 12) {
+ 	 						layer.hide();
+ 		 	 			} else {
+ 		 	 				layer.show();
+ 		 	 			}
+ 	 				}
+	 	 		};
+	 	 		
+	 	 		// 警卫地点选择页面
+	 			$(".tool-container .btn").on("click",function(){
+	 				var jwdialog = $("#jwdd");	 				
+	 				// 关闭
+	 				jwdialog.find(".z-dialog-close").click(function(){
+	 					jwdialog.dialog("close");
+	 				});
+	 				// 确定
+	 				jwdialog.find(".z-dialog-sure").click(function(){
+	 					hook.mapPlugin.removeGraphics("jjplace");
+	 					zMclPlugin.addJjdd();	 					
+	 				});
+	 				/*
+					 * jwdialog.find(".z-dialog-sure").click(function(){ // 选中的时间 get_time=$("#choose_time option:selected").val(); area=$("#area input").val(); jwdialog.dialog("close"); });
+					 */
+	 				jwdialog.dialog("open");
+	 				$("#area span input").attr("placeholder","米");		 
+	 			});
+	 			// 警卫路线
+	 			$(".tool-container .route").on("click",function(){
+	 				
+	 			})
+	 			
+	 			// 不知道什么，暂时注释掉，地图初始化显示不出来
+	 			 mapPlugin.chooseCircle();
+	 			 mapPlugin.spjkLayer();
+			},
+			// 定位点视频监控信息
+			vedioView: function (datax,datay) {		
+				var x = datax;
+				var y = datay;
+				// 线样式(线样式 ，线颜色，线宽度)
+				var lineSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([
+						255, 0, 0,0
+				]), 2);
+				// 图形样式（填充样式， 轮廓样式，图形填充色）radius，半径，单位：米
+				var symbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, lineSymbol, new dojo.Color([
+						255, 0, 0, 0
+				]));
+				var circle = new esri.geometry.Circle({
+					center: [
+							x, y
+					],
+					radius: 100
+				});
+				var graphic = new esri.Graphic(circle, symbol);								
+			    mapPlugin.setCenter({"x":x,"y":y});
+			     gg = mapPlugin.addGraphic("spjk",graphic);
+				 mapPlugin.mapObj.setExtent(gg._extent, true);
+				 // "lonMax":circle._extent.xmax,
+				 // "lonMin":circle._extent.xmin,
+				 // "latMax":circle._extent.ymax,
+				 // "latMin":circle._extent.ymin,
+				var _data={
+						"fields": "id,name,lon,lat,code,monitorBrandCode,status,monitorCategoryName,alt,hpgId",
+						"page": 1,
+						"rows": 2000
+				};
+				var $this = this;						
+				var div=$("#vedio_choose");
+				var pointid=[];
+				z.request({
+		 			url:window.WEB_ROOT_PATH + "/vedio/channel/datagrid.json",
+		 			data:_data,
+		 			success:function(data){
+		 				var div=$("#vedio_choose");
+						div.dialog("open");
+		 				if(data&&data.rows&&data.rows.length){		
+ 								$.each(data.rows,function(i,e){
+ 									/*
+									 * var lon = e.lon; var lat =e.lat;
+									 */
+									if (e.lon && e.lat) {
+										var point = new esri.geometry.Point(e.lon, e.lat);
+										if (circle.contains(point)) {
+											pointid.push(e);
+										}
+									}
+ 			 					});
+ 								callback(pointid);
+ 								vedioChoose(pointid);
+ 		 				}
+		 				if(typeof(success) == "function"){
+		 	 				success.apply($this,arguments);
+		 				}
+		 			}
+		 		},true);	
+	 	 			function callback(pointid) {
+	 	 				var div=$("#vedio_choose");
+						// 清除死数据
+						con=div.find("#bodylist");
+						con.empty();
+						// 加载选择数据
+						/*
+						 * if (pointid.vedioPointLayer) { vedioChoose(pointid.vedioPointLayer); }
+						 */
+						// 投屏
+						div.find(".vedio-choose-throw").off("click").click(function(){								 							 							 
+							 	 var arr=[];
+								 var checkInput = con.find("input:checkbox[name='hpgId']:checked").each(function () { 
+									 var val = $(this).val();
+									return arr.push(val);
+									 });															 								
+								 var _data = {"videoCode" :arr.join(",")};								
+								 jQuery.ajax({
+								       url: window.WEB_ROOT_PATH+"/vedio/PushBigScreen.do",// videoWidth videoLength
+								       type: "POST",
+								       async:false,
+								       cache:false,
+								       data:{"videoCode" :arr.join(",")},       
+								       success:function(data) {
+								    	   var _data = JSON.parse(data);
+								    	   if(_data.Error==0){
+								    		   alert("访问成功")
+								    		}else if(_data.Error==2){
+								    			alert("登入失败");
+								    		};								           
+								       },
+								       error: function (data) {							                 
+							           }
+								    });							
+						});												
+	 	 			}
+	 	 			div.find(".vedio-choose-close").off("click").click(function(){
+						hook.mapPlugin.removeGraphics("selectLayer");
+						div.dialog("close");
+					});
+	 	 			// 加载选择视频数据
+					function vedioChoose(pointid){
+						var div=$("#vedio_choose");
+						con=div.find("#bodylist");
+						var number = 1;
+						for(var i=0,l=pointid.length;i<l;i++){							
+							var mar = pointid[i];
+							// 判断name，code，monitorBrandCode是否为undefined(排除标题点)
+							if (typeof(mar.name) != "undefined" && typeof(mar.code) != "undefined" && typeof(mar.monitorBrandCode) != "undefined" && typeof(mar.lon) != "undefined" && typeof(mar.lat) != "undefined") {
+								var htm = $("<div/>").addClass("bodylist")
+								.append($("<div/>").addClass("num fl").html(number++))
+								.append($("<div/>").addClass("checkbox fl").html('<input type="checkbox" value="' + mar.hpgId + '" name="hpgId" brand="' + mar.monitorBrandCode + '" onclick="checkclick(this);"><input type="hidden" value="' + mar.lon + '" name="lon"><input type="hidden" value="' + mar.lat + '" name="lat">'))
+								.append($("<div/>").addClass("text_name fl").html(mar.name))
+								.append($("<div/>").addClass("num_shebei fl").html(mar.monitorBrandCode.replace("channel-brand-", "") == "hk" ? "海康" : (mar.monitorBrandCode.replace("channel-brand-", "") == "ys" ? "宇视" : "")));
+								con.append(htm);
+							}
+						}
+					}
+			},
+						
+			initObjectTimer:function(){
+		 		var $this=this;
+		 		setInterval(function(){
+		 			if(mapPlugin&&mapPlugin.graphicsLayers["trackobjectPointLayer"]){
+		 				var carGraphics = mapPlugin.graphicsLayers["trackobjectPointLayer"].graphics;
+						for (var i = 0, l = carGraphics.length; i < l; i++) {
+							var data=carGraphics[i];
+							/* if (data && data.attributes.gpsTime&&new Date().getTime()-new Date(data.attributes.gpsTime).getTime()>300000) { */
+							if (data && data.attributes.gpsTime&&new Date().getTime()-new Date(data.attributes.gpsTime.replace('-', '/')).getTime()>300000) {
+								var options={
+										lon:data.geometry.x,
+										lat:data.geometry.y,
+										url:"/z-pluginPlat-qzyj/img/z-qzyj/map/police/OutLine/car.png",
+										status:"offline"
+								}
+								$this.movePoint("trackobjectPointLayer",carGraphics[i],options);
+							}
+						}
+		 			}
+		 		},5000);
+		 	},
+			initCommandListener: function () {
+				var $this=this;
+				// 更新点位坐标
+				z.command.addEvent("updatePoint", function (args, timespan, engine) {
+					var data = args.data;
+					if (data) {
+						var carGraphics = mapPlugin.graphicsLayers["trackobjectPointLayer"].graphics;
+						for (var i = 0, l = carGraphics.length; i < l; i++) {
+							if (carGraphics[i] && carGraphics[i].id == data.id && data.lon && data.lat) {
+								var options={
+										lon:data.lon,
+										lat:data.lat,
+										url:"/z-pluginPlat-qzyj/img/z-qzyj/map/police/Full/car.png",
+										status:"online",
+										gpsTime:data.gpsTime
+								}
+								if(data.status&&data.status.indexOf("1")>-1){
+									options.status="moving";
+									options.angle=-30;
+								}else if(data.status&&data.status.indexOf("2")>-1){
+									options.status="arrived";
+									options.angle=0;
+								}
+								$this.movePoint("trackobjectPointLayer",carGraphics[i],options);
+								break;
+							}
+						}
+					}
+				});
+			},
+			movePoint:function(layerName,point,options){
+				if(options){
+					mapPlugin.graphicsLayers[layerName].remove(point);
+				 	point.geometry.setX(options.lon);
+				 	point.geometry.setY(options.lat);
+				 	if(options.status&&options.status.length>0){
+				 		point.attributes.status=options.status;
+				 	}
+				 	if(options.url&&options.url.length>0){
+				 		point.symbol.url=options.url;
+				 	}
+				 	if(options.angle){
+				 		point.symbol.angle=options.angle;
+				 	}
+				 	if(options.gpsTime&&options.gpsTime.length>0){
+				 		point.attributes.gpsTime=options.gpsTime;
+				 	}
+				 	mapPlugin.graphicsLayers[layerName].add(point);
+				}
+		 	},
+			cerSsCount:function () {
+		 		var $this = this;
+		 		var arr = []; 
+		 		z.request({
+		 			url: window.WEB_ROOT_PATH + "/gps/trackHistory/trackObjectdatagrid.json",
+		 			dataType:"json",
+		 			success: function (args) {
+		 				var div1 = $("#qzyj_cer_sstj");
+		 				var div2 = $("#qzyj_cer_sstj_clz");
+		 				var div3 = $("#qzyj_cer_sstj_gfz");
+		 				var div4 = $("#qzyj_cer_sstj_djs");
+		 				var htm = "";
+		 				var htm1 = "";
+		 				var htm2 = "";
+		 				var htm3 = "";
+		 				var htm4 = "";
+		 				var htm5 = "";
+		 				var htm6 = "";
+		 				var a=0,b=0,c=0;
+		 				if (args && args.rows && args.rows.length) {
+		 					var data = args.rows;
+		 					for(var n = 0;n<data.length;n++){
+		 						if(data[n].organization){
+		 							arr.push(data[n].organization.name);
+		 						}
+		 						if(data[n].lastPostion){
+	 								var da = data[n].lastPostion.status;
+	 								if(da){
+	 									if(da.indexOf("1")>=0){// 到场
+		 									a++;
+		 								}else if (da.indexOf("2")>=0){// 处理中
+		 									b++;
+		 								}else {// 未到场
+		 									c++;
+		 								}
+	 								}
+	 							}
+		 					}
+		 					var ret = [];
+		 					if(arr){
+		 						for(var j = 0;j<arr.length;j++){
+		 							if (ret.indexOf(arr[j]) === -1) {
+		 								ret.push(arr[j]);
+		 							}
+		 						}
+		 						for(var m = 0;m<ret.length;m++){
+		 							htm1 = "<div class=\"section type-djs\"><div class=\"dPointBtn\"><i class=\"iconfont\">&#xe8f7;</i></div><div class=\"dPointOrg\" style=\"width:200px\">"+ ret[m] +"</div><div class=\"dPointPerson\">";
+		 							htm4 = "";
+		 							for(var i = 0;i<data.length;i++){
+		 								if(data[i].lastPostion){
+			 								var da = data[i].lastPostion.status;
+			 								if(da){
+			 									if(da.indexOf("1")>=0){// 接收
+				 									htm6 = "<div class=\"type-gfz\">";
+				 								}else if (da.indexOf("2")>=0){// 到达
+				 									htm6 = "<div class=\"type-clz\">";
+				 								}else {// 未到场
+				 									htm6 = "<div class=\"type-djs\">";
+				 								}
+			 								}
+			 							}
+				 						if(data[i].organization){
+				 							if(data[i].organization.name == ret[m]){
+				 								if(data[i].type == "vehicle"){
+						 							htm2 = "<div></div><div>"+ "车" + "</div>";
+						 						}else{
+						 							htm2 = "<div></div><div>"+ "人" + "</div>";
+						 						}
+				 								htm3 = "<div>"+ data[i].name +"</div>";
+					 							htm4 += "<div style=\"cursor:pointer;\" onclick=\"zMapComPlugin.trackPoint('"+ data[i].id +"')\">" + htm2 + htm3 + "</div>";
+				 							}
+				 						}
+				 					}
+		 							htm5 += htm1 + htm4 + "<div>" +"</div>"+ "</div></div>";
+		 						}
+			 					var bfbA = Math.round(b / data.length * 10000) / 100.00 + "%";
+			 					var bfbB = Math.round(a / data.length * 10000) / 100.00 + "%";
+			 					var bfbC = Math.round(c / data.length * 10000) / 100.00 + "%";
+			 					div2.html(bfbA);
+			 					div3.html(bfbB);
+			 					div4.html(bfbC);
+			 					div1.html(htm5);
+
+					 	 		$("#dynamicPointRoll").PageSwitch({
+									arrowable: true,
+									direction:"vertical",
+									easing:'ease-in',
+									duration:1000,
+									interval: 5000, // 自动播放间隔
+									autoPlay:true,
+									pagination : false,
+									keyboard : false, // 是否支持键盘上下左右切换
+									pageNum: 4
+								});
+								$(".dPointBtn>i").click(function(e){
+									var dPointPerson = $(this).parent(".dPointBtn").siblings(".dPointPerson");
+									var clone = dPointPerson.clone(true);
+									var view;
+									if($("#dynamicPointView").length){
+										view = $("#dynamicPointView");
+									}else{
+										view = $("<div id=\"dynamicPointView\"></div>").appendTo($("body"));
+									}
+									view.css({
+										right: $("body").width()-e.pageX + "px",
+										bottom: $("body").height()-e.pageY + "px"
+									}).empty().append(clone).show(300,"swing");
+									$("body").one("click",function(){
+										view.hide(300,"swing").empty();
+									});
+									return false;
+					 			});
+		 					}else {
+		 						$this.hook.alert("数据缺失！");
+		 					}
+		 				}
+		 			}
+		 		});
+		 	},
+			showLayer : function (options,success){
+		 		var $this = this;
+				var layer = mapPlugin.graphicsLayers[options.name];
+				if(layer){
+					layer.show();
+				}else{
+					zMapComPlugin.getMapPoint.apply($this,arguments);
+				}
+		 	},
+			getMapPoint : function (options,success){		
+		 		var $this = this;
+		 		if(!options.url || !options.name || !options.targetTable){
+		 			return
+		 		}
+		 		var dOption ={
+	 				x:"x",
+					y:"y",
+					id:"id",
+					name:"name",
+					targetId:"id",
+					code:"code",
+					monitorBrandCode:"monitorBrandCode",
+					status:"status", // 添加状态
+					monitorCategoryName:"monitorCategoryName",
+					gpsTime:"gpsTime",
+					alt:"alt",
+					// 警情信息模板相关
+					afdd:"afdd",
+					bjsj:"bjsj",
+					jjdwmc:"jjdwmc",
+					occurrenceDate:"occurrenceDate",
+					content:"content"
+		 		}
+		 	
+		 		$.extend(true,dOption,options.param);
+		 		z.request({
+		 			url:options.url,
+		 			data:options.data?options.data:{},
+		 			success:function(data){
+		 			// 设置对讲机的返回时间
+		 				if (data&&data.backTime) {
+		 					var backTime = data.backTime;
+		 				}
+		 				if(data&&data.rows&&data.rows.length){
+		 					if(options.clusterLayer){
+		 						var clusterData=[];
+		 						$.each(data.rows,function(i,e){
+		 							console.log(e[dOption.x]);
+		 							if(e[dOption.x] && e[dOption.y]){
+		 								var data={
+	 										x:e[dOption.x],
+ 			 	 			 				y:e[dOption.y]
+		 								};
+		 								var dData = {};
+ 			 							var sData = (options.attributes&&options.attributes.sData)?options.attributes.sData:{};
+ 			 							if(options.attributes && options.attributes.dData){
+ 				 							$.each(options.attributes.dData,function(ii,ee){
+ 				 								var str="";
+ 				 								e;
+ 				 								if(ee instanceof Array){
+ 				 									$.each(ee,function(iii,eee){
+ 				 										str+="['"+eee+"']";
+ 				 									});
+ 				 								}else{
+ 				 									str = "['"+ee+"']";
+ 				 								}
+ 				 								dData[ii] = eval("e"+str);
+ 				 							});
+ 			 							}
+		 								data["attributes"]=$.extend(true,{},dData,sData);
+		 								clusterData.push(data);
+		 							}
+ 			 					});
+ 								mapPlugin.addClusters(clusterData,zMclPlugin.clusterInfoTemplate("jjd"));
+ 							}else{
+ 								$.each(data.rows,function(i,e){
+ 			 						if(e[dOption.x] && e[dOption.y]){
+ 			 							var node={};
+ 			 							node.text = options.name;
+ 			 							node.attributes=options.marker?options.marker:{};
+ 			 							var data ={
+ 											x:e[dOption.x],
+ 			 	 			 				y:e[dOption.y],
+ 			 	 			 				id:e[dOption.id],
+ 			 	 			 				name:e[dOption.name],
+ 			 	 			 				targetTable:options.targetTable,
+ 			 	 			 				targetId:e[dOption.targetId],
+ 			 	 			 				type:e[dOption.type],
+ 			 	 			 				code:e[dOption.code],
+			 	 			 				monitorBrandCode:e[dOption.monitorBrandCode],
+			 	 			 				status:e[dOption.status],
+			 	 			 				monitorCategoryName:e[dOption.monitorCategoryName],		 							
+			 	 			 				angle:e[dOption.alt],
+			 	 			 				gpsTime:e[dOption.gpsTime],
+ 			 	 			 				backTime:backTime,
+			 	 			 				// 警情信息模板相关
+			 	 							afdd:e[dOption.afdd],
+			 	 							bjsj:e[dOption.bjsj],
+			 	 							jjdwmc:e[dOption.jjdwmc],
+			 	 							occurrenceDate:e[dOption.occurrenceDate],
+			 	 							content:e[dOption.content],
+			 	 							hpgId:e[dOption.hpgId]
+ 			 							}
+ 			 						
+ 			 							var dData = {};
+ 			 							var sData = (options.attributes&&options.attributes.sData)?options.attributes.sData:{};
+ 			 							if(options.attributes && options.attributes.dData){
+ 				 							$.each(options.attributes.dData,function(ii,ee){
+ 				 								var str="";
+ 				 								e;
+ 				 								if(ee instanceof Array){
+ 				 									$.each(ee,function(iii,eee){
+ 				 										str+="['"+eee+"']";
+ 				 									});
+ 				 								}else{
+ 				 									str = "['"+ee+"']";
+ 				 								}
+ 				 								dData[ii] = eval("e"+str);
+ 				 							});
+ 			 							}
+ 			 						// 设置文字标题颜色和摄像头状态
+ 			 							zMapComPlugin.setColorAndStstusName(options.name,data,node);
+ 			 							// zMapComPlugin.pictureOffset(options.name,data,1);
+ 			 							zMapComPlugin.pictureOffset(options.name,data,1);// 图片偏移
+ 			 							var g = zMclPlugin.addGeometryTypes(node,data,false);
+ 			 							g.setAttributes($.extend({},sData,dData));
+ 			 						}
+ 			 					});
+ 							}
+		 					
+		 				}
+		 				if(typeof(success) == "function"){
+		 	 				success.apply($this,arguments);
+		 				}else if(typeof(options.success) == "function"){
+		 					options.success.apply($this,arguments);
+		 				}
+		 			}
+		 		},true);
+		 	},
+		 	updateMapZoom : function (newValue,oldValue){
+				if(hook.mapPlugin.getZoom()!=newValue){
+					hook.mapPlugin.setZoom(newValue);
+				}
+			},
+			// 设置对讲机属性（文字标题颜色，摄像头状态）
+			setColorAndStstusName: function(layerName,data,node) {
+				if (layerName == "interphone") {
+					node.attributes.htmlColor = "#00BFFF";
+					if (typeof(data.status) != "undefined") {
+						if (data.status == "1") {
+							node.attributes.htmlColor = "#00FF00";
+							data.status = "在线";
+						} else if (data.status == "0" || data.status == "2") {
+							node.attributes.htmlColor = "#ff0000";
+							data.status = "离线";
+						} else {
+							data.status = "";
+						}
+					} else {
+						data.status = "";
+					}
+					/*
+					 * return; // 设置摄像头的种类图片， node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio.png"; if (data.monitorCategoryName && data.monitorCategoryName != "") { if (data.monitorCategoryName == "带云台枪机" || data.monitorCategoryName == "标清云台摄像机" || data.monitorCategoryName == "高清云台摄像机") {// 枪机式摄像头图片的旋转角度 if (typeof(data.angle) != "undefined") { if (data.angle >= 0 && data.angle <= 45) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/gun/rotation_gun_vedio1.png"; } else if (data.angle > 45 && data.angle <= 135) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/gun/rotation_gun_vedio2.png"; } else if (data.angle > 135 && data.angle <= 225) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/gun/rotation_gun_vedio3.png"; } else if (data.angle > 225 && data.angle <= 315) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/gun/rotation_gun_vedio4.png"; } else if (data.angle > 315 && data.angle <= 360) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/gun/rotation_gun_vedio1.png"; } } } else if (data.monitorCategoryName == "球机" || data.monitorCategoryName == "快球") {// 球机式机式摄像头图片的旋转角度 if (typeof(data.angle) != "undefined") { if (data.angle >= 0 && data.angle <= 45) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/ball/rotation_ball_vedio1.png"; } else if (data.angle > 45 && data.angle <= 135) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/ball/rotation_ball_vedio2.png"; } else if (data.angle > 135 && data.angle <= 225) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/ball/rotation_ball_vedio3.png"; } else if (data.angle > 225 && data.angle <= 315) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/ball/rotation_ball_vedio4.png"; } else if (data.angle > 315 && data.angle <= 360) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/ball/rotation_ball_vedio1.png"; } } } else if (data.monitorCategoryName == "半球") {// 半球式机式摄像头图片 node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/half_ball_vedio.png"; } else if (data.monitorCategoryName == "标清固定摄像机" || data.monitorCategoryName == "高清固定摄像机" || data.monitorCategoryName == "枪机" || data.monitorCategoryName == "虚拟摄像机" || data.monitorCategoryName == "变焦枪机") {// node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/gun_vedio.png"; } else if (data.monitorCategoryName == "车载摄像机") {// 车载摄像机 node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/car_vedio.png"; } else if (data.monitorCategoryName == "DVI输入摄像机" || data.monitorCategoryName == "VGA输入摄像机" || data.monitorCategoryName == "DVR安全接入摄像机" || data.monitorCategoryName == "VM安全接入摄像机" || data.monitorCategoryName == "矩阵安全接入摄像机") { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/dvi_vedio.png"; } }
+					 */
+				}
+			},
+			
+			// 人车定位
+			trackPoint: function (id) {
+				var $this = this;
+				var success = function(){
+					var mapwindow = this;
+					if(mapwindow.mapPlugin.graphicsLayers.trackobjectPointLayer){
+						var data = mapwindow.mapPlugin.graphicsLayers.trackobjectPointLayer.graphics;
+						$.each(data,function(i,e){
+							if(e.unitInfoId == id){
+								$this.setCenterInfo(e);
+							}else{
+								// e.hide();
+							}
+						});
+					}
+				}
+				if(!mapPlugin.graphicsLayers.trackobjectPointLayer){
+					$.each(layerOptions,function(i,e){
+						if(e.name == "trackobjectPointLayer"){
+							$this.showLayer.apply(window,[e,success]);
+						}
+					});
+				}else{
+					success.apply(window,[]);
+				}
+			},
+			setCenterInfo:function(graphic,level){
+				require(["dojo/on"], function(on){
+					on.once(mapObj, "extent-change", function(args){
+						mapPlugin.showInfoTemplate(graphic);
+					});
+					mapPlugin.setCenter(graphic.geometry,level?level:10);
+				});
+			},
+			// 135作战圈
+	/*
+	 * battleCircle:function(){ // zMclPlugin.clearResult();
+	 * 
+	 * mapPlugin.removeGraphics("OffLineAlarm"); mapPlugin.removeGraphics("battleCircle"); mapPlugin.removeGraphics("battleCircleGraphics");
+	 * 
+	 * hook.showPopover("#measureLi", { content: "点击地图选择作战圈位置" }); var mapObjClick = mapObj.on("click", clickFinish); function clickFinish(evt){ var point = evt.mapPoint; var x = point.x; var y = point.y;
+	 * 
+	 * mapPlugin.removeGraphics("battleCircle"); mapPlugin.removeGraphics("battleCircleGraphics"); // 线样式(线样式 ，线颜色，线宽度) var lineSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255,0,0]), 4); // 图形样式（填充样式， 轮廓样式，图形填充色）radius，半径，单位：米 var symbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_NULL, lineSymbol, new dojo.Color([255,0,0])); var circle = new esri.geometry.Circle({center: [x,y],radius: 60 }); var graphic = new esri.Graphic(circle, symbol); mapPlugin.addGraphic("battleCircle",graphic); // 1 分钟圆样式
+	 * 
+	 * lineSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255,99,71]), 4); symbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_NULL, lineSymbol, new dojo.Color([255,0,0])); circle= new esri.geometry.Circle({center: [x,y],radius: 180 }); graphic = new esri.Graphic(circle, symbol); mapPlugin.addGraphic("battleCircle",graphic); // 3 分钟圆样式
+	 * 
+	 * lineSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255,160,122]), 4); symbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_NULL, lineSymbol, new dojo.Color([255,0,0])); circle = new esri.geometry.Circle({center: [x,y],radius: 300 }); graphic = new esri.Graphic(circle, symbol); mapPlugin.addGraphic("battleCircle",graphic); // 5 分钟圆样式
+	 * 
+	 * mapPlugin.setCenter({"x":x,"y":y},14);// 居中放大
+	 * 
+	 * if (x && y) { z.request({ url : window.WEB_ROOT_PATH+"/gps/trackHistory/trackObjectdatagrid.json", success:function(data){ if (data && data.rows && data.rows.length) { var rows = data.rows; for (var i=0,l=rows.length;i<l;i++) { var lon = rows[i].lon; var lat = rows[i].lat; if (lon && lat) { var point = new esri.geometry.Point(lon, lat); if (circle.contains(point)) { var node = { "text" : "battleCircleGraphics", "attributes" : { markerImgPath: window.WEB_ROOT_PATH+"/img/z-qzyj/map/police/OutLine/car.png", markerImgW : 30, markerImgH : 30 } }; var data = { "id" : rows[i].id, "name" : rows[i].name, "targetId" : rows[i].id, "targetTable" : "trackobject", "x" : lon, "y" : lat, "type" : "vehicle" }; zMclPlugin.addGeometryTypes(node,data); } } } } } }); } hook.hidePopover("#measureLi"); mapObjClick.remove(); } },
+	 */
+
+			drawline:function(){
+				var gsvc = new esri.tasks.GeometryService("https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer");					
+				var tb = new esri.toolbars.Draw(mapPlugin.mapObj);
+				tb.deactivate();	
+				tb.activate(esri.toolbars.Draw.POLYLINE,{
+		       	showTooltips: true
+		       });
+				var DrawEnd_listener =tb.on("draw-end", function (evt) {
+					DrawEnd_listener.remove();
+					mapPlugin.mapObj.graphics.clear();
+					var symbol =  new esri.symbol.SimpleLineSymbol;
+					var graphic = new esri.Graphic(evt.geometry, symbol);
+					mapPlugin.mapObj.graphics.add(graphic);
+					dobuffer(evt.geometry);
+				});
+				// 启动方式尚待优化。
+				function dobuffer(geometry){// 这里geometry能顺利传进来
+				   var pointid = [];
+				   var jkobj = new Object();
+				   var jkobjs = new Array();
+				   var graphiccccc = mapPlugin.mapObj._layers.graphicsLayer5.graphics;
+				   mapPlugin.mapObj._layers.graphicsLayer5.hide();
+				   var params = new esri.tasks.BufferParameters();		
+				   params.unit = esri.tasks.GeometryService.UNIT_KILOMETER;
+				   params.unionResults = true;
+				   params.geodesic = true;				  
+				   params.geometries = [geometry];
+		           params.bufferSpatialReference = new esri.SpatialReference({wkid: 102113});
+		           params.distances = [5];// 可修改为窗口输入
+		           params.outSpatialReference = mapPlugin.mapObj.spatialReference;		      
+		           gsvc.buffer(params,function(evt) {
+			           var symbol = new esri.symbol.SimpleFillSymbol(
+				           		"none",
+				           		new esri.symbol.SimpleLineSymbol("dashdot", 
+				           				new dojo.Color([255,0,0]), 
+				           	            2),
+				           	    new dojo.Color([255,255,0,0.25]));			           			
+			           			var graphic = new esri.Graphic(evt[0],symbol);
+			           			mapPlugin.mapObj.graphics.add(graphic);
+			           			for (var i = 0, l = graphiccccc.length; i < l; i++) {
+									if (graphiccccc[i] && graphiccccc[i].geometry) {
+										if (evt[0].contains(graphiccccc[i].geometry)) {
+											pointid.push(graphiccccc[i]);											
+											var sym = graphiccccc[i].symbol;
+						           			var geometry = graphiccccc[i].geometry;
+						           			var gr = new esri.Graphic(geometry,sym);	
+						           			mapPlugin.mapObj.graphics.add(gr);
+										}
+									}
+								}
+			           			console.log(pointid[1]); 
+			           			openform (pointid);
+		           },function(){alert("请重新绘制")});
+		           
+           		function openform (pointid){
+	           		var div=$("#vedio_choose");
+					con=div.find("#bodylist");
+					con.empty();
+					var number = 1;
+					this.pointid = pointid;
+					for(var i=0,l=pointid.length;i<l;i++){							
+						var mar = pointid[i];
+						// 判断name，code，monitorBrandCode是否为undefined(排除标题点)
+						if (typeof(mar.name) != "undefined" && typeof(mar.code) != "undefined" && typeof(mar.monitorBrandCode) != "undefined" && typeof(mar.lon) != "undefined" && typeof(mar.lat) != "undefined") {
+							var htm = $("<div/>").addClass("bodylist")
+							.append($("<div/>").addClass("num fl").html(number++))
+							.append($("<div/>").addClass("checkbox fl").html('<input type="checkbox" value="' + mar.hpgId + '" name="hpgId" brand="' + mar.monitorBrandCode + '" onclick="checkclick(this);"><input type="hidden" value="' + mar.lon + '" name="lon"><input type="hidden" value="' + mar.lat + '" name="lat">'))
+							.append($("<div/>").addClass("text_name fl").html(mar.name))
+							.append($("<div/>").addClass("num_shebei fl").html(mar.monitorBrandCode.replace("channel-brand-", "") == "hk" ? "海康" : (mar.monitorBrandCode.replace("channel-brand-", "") == "ys" ? "宇视" : "")));
+							con.append(htm);
+						}
+					}
+					div.dialog("open");
+				}	
+				}		     
+	        },
+			
+	        // 显示地图坐标
+		showCoordinates:function (mapObj) {	
+			    var coordinatesDiv = document.getElementById("map_coordinates");// js通过id获取div
+			    if (coordinatesDiv) {// div存在就显示
+			        coordinatesDiv.style.display = "block";
+			    }
+			    else {// 不存在情况下，动态创建指定id的div
+			        var _divID_coordinates = "map_coordinates";// div的id
+			        coordinatesDiv = document.createElement("div");// 动态创建div
+			        coordinatesDiv.id = _divID_coordinates;// id
+			        coordinatesDiv.className = "map-coordinates";// div的css样式
+			        coordinatesDiv.innerHTML = "";// 默认div填充为空
+			        document.getElementById("dt").appendChild(coordinatesDiv);// 动态创建的div放在地图map容器div里面
+			        coordinatesDiv.style.position="absolute";
+			        coordinatesDiv.style.bottom="30px";
+			        dojo.connect(mapPlugin.mapObj, "onMouseMove", showCoords);// 监听地图的移动事件
+			        dojo.connect(mapPlugin.mapObj, "onMouseDrag", showCoords);
+			        function showCoords(evt) {
+			            evt = evt ? evt : (window.event ? window.event : null);
+			            var mp = evt.mapPoint;// 获取鼠标当前位置的地图坐标值
+			            coordinatesDiv.innerHTML = "<span id='cd_label' style='font-size:13px;text-align:center;font-family:微软雅黑;'>" + "横坐标：" + mp.x.toFixed(3) + "&nbsp;纵坐标：" + mp.y.toFixed(3) + "</span>";
+			        }
+			    }
+			},
+			// 电子围栏
+			electronicFence:function(){
+				mapPlugin.removeGraphics("electronicFence");
+				mapPlugin.removeGraphics("OffLineAlarm");
+				mapPlugin.setCenter({"x":118.89126,"y":28.93815},14);
+				
+				// 线样式(线样式 ，线颜色，线宽度)
+				var lineSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_DASH, new dojo.Color([255,0,0]), 2);
+				// 图形样式（填充样式， 轮廓样式，图形填充色）
+				var symbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_NULL, lineSymbol, new dojo.Color([255,0,0]));
+				var polygon = new esri.geometry.Polygon([[118.89396, 28.93740], [118.89381, 28.93879], [118.89148, 28.93884], [118.89054, 28.93964], [118.88837, 28.93929], [118.88891, 28.93699], [118.89396, 28.93740]]);
+				var graphic =  new esri.Graphic(polygon, symbol);
+				mapPlugin.addGraphic("electronicFence",graphic); // 电子围栏
+				
+				var node = {
+						"text" : "electronicFence",
+						"attributes" : {
+			 				markerImgPath: window.WEB_ROOT_PATH+"/img/z-qzyj/map/Important_user.png",
+			 				markerImgW : 20,
+							markerImgH : 20
+			 			}
+					};
+				var data = {
+					"x" : 118.89343,
+					"y" : 28.93810
+				};
+				zMclPlugin.addGeometryTypes(node,data);
+				var textSymbol = new esri.symbol.TextSymbol("Pony", new esri.symbol.Font("12px", esri.symbol.Font.STYLE_NORMAL, esri.symbol.Font.VARIANT_NORMAL, esri.symbol.Font.WEIGHT_BOLDER), new esri.Color("#32CD32"));
+				textSymbol.setOffset(0, -24);
+				graphic = new esri.Graphic(new esri.geometry.Point(118.89343, 28.93810), textSymbol);
+				mapPlugin.addGraphic("electronicFence",graphic);
+				
+				data.x = 118.89199;
+				data.y = 28.94064;
+				zMclPlugin.addGeometryTypes(node,data);
+				textSymbol = new esri.symbol.TextSymbol("Jack Ma", new esri.symbol.Font("12px", esri.symbol.Font.STYLE_NORMAL, esri.symbol.Font.VARIANT_NORMAL, esri.symbol.Font.WEIGHT_BOLDER), new esri.Color("#DC143C"));
+				textSymbol.setOffset(0, -24);
+				graphic = new esri.Graphic(new esri.geometry.Point(118.89199, 28.94064), textSymbol);
+				mapPlugin.addGraphic("electronicFence",graphic);
+				
+				data.x = 118.88981;
+				data.y = 28.93878;
+				zMclPlugin.addGeometryTypes(node,data);
+				textSymbol = new esri.symbol.TextSymbol("Bill Gates", new esri.symbol.Font("12px", esri.symbol.Font.STYLE_NORMAL, esri.symbol.Font.VARIANT_NORMAL, esri.symbol.Font.WEIGHT_BOLDER), new esri.Color("#32CD32"));
+				textSymbol.setOffset(0, -24);
+				graphic = new esri.Graphic(new esri.geometry.Point(118.88981, 28.93878), textSymbol);
+				mapPlugin.addGraphic("electronicFence",graphic);
+				
+				$.messager.alert('警告','Jack Ma 已走出电子围栏外');
+			},
+			// 轨迹回放的方法
+	 		trajectoryBack : function(id) {
+	 			var lineSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_DASH, new dojo.Color([0,255,0]), 6);
+	 			if (id == "456") {
+	 				mapPlugin.setCenter({"x":118.89066,"y":28.94558},14);
+	 				mapPlugin.hideInfoTemplate();
+	 				mapPlugin.removeGraphics("trajectoryBack");
+	 				var polyline = new esri.geometry.Polyline({
+			            "paths":[[[118.89267,28.93929], [118.89274,28.94047], [118.89265,28.94073], [118.89263,28.94116], [118.89248,28.94133], 
+			                      [118.89050,28.94131], [118.89044,28.94388], [118.88937,28.94496], [118.88473,28.94412], [118.88334,28.94599], 
+			                      [118.88302,28.94627], [118.88261,28.94715], [118.88626,28.94785], [118.89035,28.94770], [118.89027,28.94979], 
+			                      [118.89284,28.94957]]],
+			            "spatialReference":mapPlugin.mapObj.spatialReference
+			        })
+	 				var graphic =  new esri.Graphic(polyline, lineSymbol);
+	 				mapPlugin.addGraphic("trajectoryBack",graphic);
+	 				
+	 				// 添加起点终点
+	 				var pointStyle={
+		    			    "url" : window.WEB_ROOT_PATH+"/img/z-qzyj/map/map_start.png",
+		    			    "height" : 23,
+		    			    "width" : 23,
+		    			    "xoffset" : 0,
+		    			    "yoffset" : 9
+		    			};
+		        	var startPoint = {"x": 118.89284, "y": 28.94957, "spatialReference": mapPlugin.mapObj.spatialReference};
+					mapPlugin.addPoint("trajectoryBack", startPoint, pointStyle);
+					pointStyle.url = window.WEB_ROOT_PATH+"/img/z-qzyj/map/map_stop.png";
+		        	var stopPoint = {"x": 118.89267, "y": 28.93929, "spatialReference": mapPlugin.mapObj.spatialReference};
+					mapPlugin.addPoint("trajectoryBack", stopPoint, pointStyle);
+	 			} else if (id == "123") {
+	 				mapPlugin.setCenter({"x":118.89112,"y":28.93270},14);
+	 				mapPlugin.hideInfoTemplate();
+	 				mapPlugin.removeGraphics("trajectoryBack");
+	 				var polyline = new esri.geometry.Polyline({
+			            "paths":[[[118.89385,28.93730], [118.89286,28.93728], [118.89250,28.93719], [118.88975,28.93691], [118.88881,28.93680], 
+			                      [118.88907,28.93552], [118.88922,28.93558], [118.88958,28.93434], [118.88960,28.93380], [118.88982,28.93382], 
+			                      [118.89012,28.93279], [118.88892,28.93281], [118.88844,28.93260], [118.88647,28.93153], [118.88920,28.92801], 
+			                      [118.88771,28.92713]]],
+			            "spatialReference":mapPlugin.mapObj.spatialReference
+			        })
+	 				var graphic =  new esri.Graphic(polyline, lineSymbol);
+	 				mapPlugin.addGraphic("trajectoryBack",graphic);
+	 				
+	 				// 添加起点终点
+	 				var pointStyle={
+		    			    "url" : window.WEB_ROOT_PATH+"/img/z-qzyj/map/map_start.png",
+		    			    "height" : 23,
+		    			    "width" : 23,
+		    			    "xoffset" : 0,
+		    			    "yoffset" : 9
+		    			};
+		        	var startPoint = {"x": 118.88771, "y": 28.92713, "spatialReference": mapPlugin.mapObj.spatialReference};
+					mapPlugin.addPoint("trajectoryBack", startPoint, pointStyle);
+					pointStyle.url = window.WEB_ROOT_PATH+"/img/z-qzyj/map/map_stop.png";
+		        	var stopPoint = {"x": 118.89385, "y": 28.93730, "spatialReference": mapPlugin.mapObj.spatialReference};
+					mapPlugin.addPoint("trajectoryBack", stopPoint, pointStyle);
+	 			} else if (id == "789") {
+	 				mapPlugin.setCenter({"x":118.92810,"y":28.96090},12);
+	 				
+	 				lineSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_DASH, new dojo.Color([0,0,255]), 8);
+	 				mapPlugin.hideInfoTemplate();
+	 				mapPlugin.removeGraphics("trajectoryBack");
+	 				var polyline = new esri.geometry.Polyline({
+			            "paths":[[[118.88759,28.94202], [118.88480,28.94182], [118.87947,28.94069], [118.87589,28.94758], [118.88239,28.95069], 
+			                      [118.89630,28.95028], [118.89885,28.94989], [118.90769,28.94940], [118.90960,28.94985], [118.92595,28.95777],
+			                      [118.92649,28.95835], [118.92836,28.96118], [118.93087,28.96599], [118.93220,28.96723], [118.93505,28.96848], 
+			                      [118.96498,28.97553], [118.96350,28.98056], [118.96187,28.98026]]],
+			            "spatialReference":mapPlugin.mapObj.spatialReference
+			        })
+	 				var graphic =  new esri.Graphic(polyline, lineSymbol);
+	 				mapPlugin.addGraphic("trajectoryBack",graphic);
+	 				
+	 				// 添加起点终点
+	 				var pointStyle={
+		    			    "url" : window.WEB_ROOT_PATH+"/img/z-qzyj/map/map_start.png",
+		    			    "height" : 23,
+		    			    "width" : 23,
+		    			    "xoffset" : 0,
+		    			    "yoffset" : 9
+		    			};
+		        	var startPoint = {"x": 118.96187, "y": 28.98026, "spatialReference": mapPlugin.mapObj.spatialReference};
+					mapPlugin.addPoint("trajectoryBack", startPoint, pointStyle);
+					pointStyle.url = window.WEB_ROOT_PATH+"/img/z-qzyj/map/map_stop.png";
+		        	var stopPoint = {"x": 118.88759, "y": 28.94202, "spatialReference": mapPlugin.mapObj.spatialReference};
+					mapPlugin.addPoint("trajectoryBack", stopPoint, pointStyle);
+	 			}
+	 		},
+			pictureOffset:function(layerName,data,flag){// 解决图片重叠的问题
+				var DataX;
+				var DataY;
+				if (data.dataX) {
+					DataX = data.dataX;
+				} else {
+					DataX = data.x;
+				}
+				if (data.dataY) {
+					DataY = data.dataY;
+				} else {
+					DataY = data.y;
+				}
+				if (!layerName || typeof(DataX) == "undefined" || typeof(DataY) == "undefined" || !flag) {
+					return;
+ 				}
+ 				layer = mapPlugin.graphicsLayers[layerName];
+ 				if(!layer){
+ 					return;
+				}
+ 				var graphics = layer.graphics;
+ 				if (graphics.length < 1) {
+ 					return;
+ 				}
+ 				for (var i=0;i<graphics.length;i++) {
+ 					var geoX=graphics[i].geometry.x;
+					var geoy=graphics[i].geometry.y;
+					var Xmax = geoX>DataX?geoX:DataX;
+					var Ymax = geoy>DataY?geoy:DataY;
+ 					if (Xmax-geoX<0.0008 && Xmax-DataX<0.0008 && Ymax-geoy<0.0008 && Ymax-DataY<0.0008) {
+ 						data.dataX = DataX + (flag * 0.0001);
+ 						data.dataY = DataY + (flag * 0.00005);
+ 						zMapComPlugin.pictureOffset(layerName,data,1);// 避免图片偏移后又与另一张图片重叠
+ 						break;
+ 					}
+ 				}
+			},
+	 		// 首页135作战圈方法2
+	 		battleCircle2 : function() {
+	 			var div1 = $("#qzyj_battleCircle");
+	 			div1.dialog("open");
+	 			$("#qzyj_battleCircle_tree").tree({    
+	 			    url:window.WEB_ROOT_PATH + "/violence/combat/tree.json",
+	 			    onClick: function(node){
+	 			    	if (node.id) {
+	 			    		battleCircleClick(node.attributes.lon,node.attributes.lat);
+	 			    	}
+	 				},
+	 				onLoadSuccess: function(){
+	 					$('#qzyj_battleCircle_tree').find("span.tree-icon").removeClass('tree-icon tree-folder tree-folder-open');
+	 				    $('#qzyj_battleCircle_tree').find("span.tree-hit").removeClass('tree-expanded');
+	 				    $('#qzyj_battleCircle_tree').find("span.tree-file").removeClass('tree-file');
+	 				}
+	 			}); 
+	 			
+	 			function battleCircleClick(x,y){
+	 				if (x&&y) {
+	 					var div1 = $("#qzyj_battleCircle");
+	 					div1.dialog("close");
+	 					
+	 					// 线样式(线样式 ，线颜色，线宽度)
+						var lineSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255,0,0]), 4);
+						// 图形样式（填充样式， 轮廓样式，图形填充色）radius，半径，单位：米
+						var symbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_NULL, lineSymbol, new dojo.Color([255,0,0]));
+						var circle = new esri.geometry.Circle({center: [x,y],radius: 60 });
+						var graphic =  new esri.Graphic(circle, symbol);
+						mapPlugin.addGraphic("battleCircle",graphic); // 1 分钟圆样式
+						
+						lineSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255,99,71]), 4);
+						symbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_NULL, lineSymbol, new dojo.Color([255,0,0]));
+						circle= new esri.geometry.Circle({center: [x,y],radius: 180 });
+						graphic = new esri.Graphic(circle, symbol);
+						mapPlugin.addGraphic("battleCircle",graphic); // 3 分钟圆样式
+						
+						lineSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255,160,122]), 4);
+						symbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_NULL, lineSymbol, new dojo.Color([255,0,0]));
+						circle = new esri.geometry.Circle({center: [x,y],radius: 300 });
+						graphic = new esri.Graphic(circle, symbol);
+						mapPlugin.addGraphic("battleCircle",graphic); // 5 分钟圆样式
+						
+						mapPlugin.setCenter({"x":x,"y":y},14);// 居中放大
+						
+						if (x && y) {
+							z.request({
+					 			url : window.WEB_ROOT_PATH+"/gps/trackHistory/trackObjectdatagrid.json",
+					 			success:function(data){
+									if (data && data.rows && data.rows.length) {
+										var rows = data.rows;
+										for (var i=0,l=rows.length;i<l;i++) {
+											var lon = rows[i].lon;
+											var lat = rows[i].lat;
+											if (lon && lat) {
+												var point = new esri.geometry.Point(lon, lat);
+												if (circle.contains(point)) {
+													var node = {
+														"text" : "battleCircleGraphics",
+														"attributes" : {
+											 				markerImgPath: window.WEB_ROOT_PATH+"/img/z-qzyj/map/police/OutLine/car.png",
+											 				markerImgW : 30,
+															markerImgH : 30
+											 			}
+													};
+													var data = {
+														"id" : rows[i].id,
+														"name" : rows[i].name,
+														"targetId" : rows[i].id,
+														"targetTable" : "trackobject",
+														"x" : lon,
+														"y" : lat,
+														"type" : rows[i].type
+													};
+													zMclPlugin.addGeometryTypes(node,data);
+												}
+											}
+										}
+									}
+					 			}
+					 		});
+						}
+		 			}
+	 			}
+	 		},
+	 		// 警情图层选择页面
+	 		showJjdSelectView : function() {
+	 			var dialog = $("#JjdSelectViewId");
+	 			// 查询
+	 			dialog.find(".z-dialog-seach").click(function(){
+	 				if (dialog.find(".z-list-view-form").form('validate')) {
+	 					mapPlugin.removeGraphics("jjdPointLayer");
+	 					
+	 					// 获取参数
+	 					var start = dialog.find("input[name=updateTimeStart]").val();
+	 					var stop = dialog.find("input[name=updateTimeStop]").val();
+	 					var jjdwdm = dialog.find("input[name=jjdwdm]").val();
+	 					var bjlbdm = dialog.find("input[name=jqlb]").val();
+	 					var bjlxdm = dialog.find("input[name=jqlx]").val();
+	 					
+	 					var jjdLayer = window.layerOptions[1];
+	 					jjdLayer.url = window.WEB_ROOT_PATH + "/caseinfo/jjd/mapJjdSeachDatagrid.json",
+	 					jjdLayer.data.startTime = start;
+	 					jjdLayer.data.endTime = stop;
+	 					jjdLayer.data.jjdwdm = jjdwdm;
+	 					jjdLayer.data.bjlbdm = bjlbdm;
+	 					jjdLayer.data.bjlxdm = bjlxdm;
+	 						
+	 					zMapComPlugin.getMapPoint.apply(window,[jjdLayer,jjdLayer.success]);
+	 					dialog.dialog("close");
+	 				}
+	 			});
+	 			// 关闭
+	 			dialog.find(".z-dialog-close").click(function(){
+	 				dialog.dialog("close");
+	 			});
+	 			dialog.dialog("open");	 				 			
+	 			
+	 			// 初始化警情类别下拉框
+	 			$("#jqlb_div").empty();
+				$("#jqlb_div").html("<input id='jqlb_id' name='jqlb' />");
+	 			var jqlb = dialog.find("input[name=jqlb]");
+	 			jqlb.combobox({
+	 			    url:window.WEB_ROOT_PATH + '/caseinfo/fkd/getFklbCombobox.json',    
+	 			    valueField:'code',    
+	 			    textField:'name',
+	 			    onChange: function(code){
+	 			    	initJqdl(code);
+	 			    	/* initJqxl(); */
+	 				}
+	 			});
+	 			initJqdl();
+	 			
+	 			/* initJqxl(); */
+	 			// 初始化警情类型
+	 			function initJqdl(code) {
+	 				if (code) {
+	 					$("#jqlx_div").empty();
+	 					$("#jqlx_div").html("<input id='jqlx_id' name='jqlx' />");
+	 					var jqdl = dialog.find("input[name=jqlx]");
+	 					jqdl.combobox({   
+	 		 			    url:window.WEB_ROOT_PATH + '/caseinfo/fkd/getFklxByFklbCode.json?code=' + code,    
+	 		 			    valueField:'code',    
+	 		 			    textField:'name',
+	 		 			    onChange: function(code){
+	 		 			    	/* initJqxl(code); */
+	 		 				}
+	 		 			});
+	 				} else {
+	 					$("#jqxl_div").empty();
+	 					$("#jqlx_div").html("<input id='jqlx_id' name='jqlx' />");
+	 					var jqdl = dialog.find("input[name=jqlx]");
+	 					jqdl.textbox({});
+	 				}
+	 			}
+	 			// 初始化警情细类
+	 			/*
+				 * function initJqxl(code) { if (code) { $("#jqxl_div").empty(); $("#jqxl_div").html("<input id='jqxl_id' name='jqxl' />"); var jqxl = dialog.find("input[name=jqxl]"); jqxl.combobox({ url:window.WEB_ROOT_PATH + '/caseinfo/fkd/getFklxByFklbCode.json?code=' + code, valueField:'code', textField:'name' }); } else { $("#jqxl_div").empty(); $("#jqxl_div").html("<input id='jqxl_id' name='jqxl' />"); var jqxl = dialog.find("input[name=jqxl]"); jqxl.textbox({}); } }
+				 */
+	 		},
+	 	// 移动点位的方法(需要更新点的图层名，更新的点位数据)
+			movePointTwo:function(layerName,data,gpslx){
+			if (!layerName || !data || !data.lon || !data.lat) {				
+					return;
+				}
+				var signId;
+				
+				if (layerName == "interphone") {					
+					signId = data.deviceId;
+				} 
+				if (!signId) {
+					return;
+				}
+				var graphics = mapPlugin.graphicsLayers[layerName].graphics;
+				if (!graphics || graphics.length <= 0) {
+					return;
+				}
+				// 移除信息模板
+				hook.mapPlugin.hideInfoTemplate();
+				// 移除点
+				var flag = 0;
+				var graphic; 
+				for (var i=graphics.length-1,l=0;i>=l;i--) {
+					if (flag >= 2) {
+						break;
+					}
+					if (graphics[i].id) {
+						if (graphics[i].id == signId) {
+							graphic = graphics[i];
+							mapPlugin.graphicsLayers[layerName].remove(graphics[i]);
+							flag++;
+						}
+					} else if (graphics[i].textId) {
+						if (graphics[i].textId == signId) {
+							mapPlugin.graphicsLayers[layerName].remove(graphics[i]);
+							flag++;
+						}
+					}
+				}
+				if (!graphic) {
+					return;
+				}
+				// 添加点
+				var node = {
+						attributes:{
+							htmlColor:"#00BFFF",
+							markerImgH:30,
+							markerImgPath:undefined,
+							markerImgW:30
+						},
+						text:undefined
+				};
+				var point = {
+						angle:data.alt,
+						code:data.code,
+						id:data.id,
+						monitorBrandCode:data.monitorBrandCode,
+						monitorCategoryName:data.monitorCategoryName,
+						name:data.name,
+						status:data.status,
+						targetId:data.id,
+						targetTable:undefined,
+						x:data.lon,
+						y:data.lat
+				};
+				if (layerName == "interphone") {
+					point.id = data.deviceId;
+					point.targetId = data.deviceId;
+					node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-qzyj/map/walkie.png";
+					node.text = "interphone";
+					point.targetTable = "interphone";
+				} else {
+					return;
+				}
+				/*
+				 * zMapComPlugin.setColorAndStstusName(layerName,point,node,[]); zMapComPlugin.pictureOffset(layerName,point,1);
+				 */
+				
+				if (layerName == "interphone") {// 设置对讲机在线离线
+					node.attributes.htmlColor = "#FF0000";
+					if (data && data.gpsTime && data.gpsTime != ""&& data.backTime && data.backTime != "") {
+						var gpsTime = new Date(data.gpsTime);
+						var backTime = new Date(data.backTime);
+						var backAfterTime = new Date(backTime.getTime() - 24*60*60*1000);						
+						if (backTime > gpsTime && gpsTime > backAfterTime) {
+							node.attributes.htmlColor = "#00FF00";
+						}
+					}
+					/*
+					 * if (rows) { if (rows.length > 0) { for (var i=0;i<rows.length;i++) { if (rows[i].deviceId == data.id) { node.attributes.htmlColor = "#00FF00"; break; } } } }
+					 */
+				}
+				
+			/*
+			 * if (layerName == "interphone") { // 对讲机标题颜色设置 if (typeof(data.lon) != "undefined" && typeof(data.lat) != "undefined") { node.attributes.htmlColor = "#00FF00"; // 更新坐标gps name为空 point.name = graphic.name; // 设置GPS在线离线
+			 * 
+			 * if (gpslx) { node.attributes.htmlColor = "#FF0000"; }
+			 * 
+			 * 
+			 * 
+			 * var StartData = new Date(new Date().getTime() - 1 * 60 * 60 * 1000); var gpsTime = new Date(data.gpsTime); if (gpsTime > StartData) { node.attributes.htmlColor = "#00FF00"; } else { node.attributes.htmlColor = "#FF0000"; } } }
+			 */
+				var g = zMclPlugin.addGeometryTypes(node,point,false);
+			},
+	 		
+	 		// 定时更新GPS在线离线
+			initGpsListener : function(){				
+				var gpsTimer = setInterval(function(){							
+						layer = mapPlugin.graphicsLayers["interphone"];				
+	 	 				if(layer && layer.visible){
+	 	 					var date = new Date();
+	 	 					console.log("GPS定时器执行=====================当前时间："+(date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate()+" "+date.getHours() + ':' + date.getMinutes() + ':' + date.getSeconds())+"=========================");
+	 	 					var graphics = layer.graphics;
+	 	 					if (graphics && graphics.length > 0) {
+	 	 						z.request({
+	 					 			url : window.WEB_ROOT_PATH+"/gps/position/getGpsDate.json",	 					 			
+	 					 			success:function(data){	
+	 					 				if (data && data.rows && data.rows.length) {
+	 					 					var backTime = data.backTime;
+	 										var rows = data.rows;
+	 										for (var i=0,l=rows.length;i<l;i++) {
+// var lon = rows[i].lon;
+// var lat = rows[i].lat;
+// var deviceId=rows[i].deviceId;
+	 											var dataPoint = rows[i];	 											
+	 											dataPoint.backTime = backTime;
+	 											zMapComPlugin.movePointTwo("interphone",dataPoint,true);
+	 										}
+	 									}
+	 					 					 					 			
+	 					 			}
+	 					 		});
+	 	 							 	 						
+	 	 					}
+						}
+				},10000);
+			},		
+	 		
+		});
+		
+		z.getInstance("z.plugin.MapComPlugin", null, "zMapComPlugin");
+	}
+})(window, z, z.plugin, $)

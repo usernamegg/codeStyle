@@ -1,0 +1,348 @@
+$(function () {
+	// 树
+	getSearchdata();
+})
+// tab 切换
+$(".time li").click(function () {
+	var index = $(this).index();
+	$(this).css("border-bottom-color", "#56B3E1").siblings().css("border-bottom-color", "#aec1cb");
+	$(".box>div").eq(index).addClass('current').siblings().removeClass('current');
+	$.parser.parse();
+})
+
+$(".out_search").find(".search_img").click(function () {
+	getSearchdata();
+})
+function getSearchdata () {
+	var $this = this;
+	var content = $("#searchText").val();
+	$('#playreal_hk_tree').tree({
+		url:window.WEB_ROOT_PATH + "/vedio/channel/tree2.json?sort=sortIndex%20code%20name&order=asc&content=" + encodeURI(content),
+		//url: window.WEB_ROOT_PATH + "/system/selfOrg/selfOrgAndChannelTree.json?sort=sortIndex%20code%20name&order=asc&content=" + encodeURI(content),
+		checkbox: true,
+		onLoadSuccess: function (node, data) {
+			treeTitle('rcmc_1', data);
+			// 判断在线离线
+			nodes = [];
+			$(".tree-file").css({
+				"background-image": "url(../img/outline.png)",
+				"background-position": "0px 0px",
+				"filter": "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../img/outline.png',sizingMethod='scale')"
+			})
+			var child = $('#playreal_hk_tree').tree('getChildren', data.target);
+			var localObj = JSON.parse(localStorage.getItem("code"));
+			var local = [];
+			if (localObj) {
+				for (var m = 0; m < localObj.length; m++) {
+					local.push(localObj[m].code);
+				}
+			}
+			var back = JSON.parse(localStorage.getItem("back"));
+			var onePoint = JSON.parse(localStorage.getItem("onePoint"));		
+			var Request = GetRequest();
+			var sp = Request["playtype"];
+			// tab 切换时直接播放勾选的页面
+			if (sp == "playreal") {
+				$(".submit").click(function(){
+					if(localObj && localObj.length > 0){
+						for (var i = 0; i < local.length; i++) {
+							if(localObj[i].code != ""){
+								OnPlayback(localObj[i].name, localObj[i].code);
+							}
+					 }
+					}
+				})
+				if(onePoint && onePoint.code != "" && onePoint.code != undefined){
+						StartPreview (onePoint.code);
+					}
+				$(".time li:eq(1)").one("click", function () {
+					if(localObj && localObj.length > 0){
+						for (var i = 0; i < local.length; i++) {
+							if(localObj[i].code != ""){
+								var text = localObj[i].name;
+								if(text != null && text != "" && text != undefined){
+									var html = "<span>" + text + "</span>,<br>";
+									$(".width").find(".content").append(html);
+								}								
+								//StopPreview(local[i]);
+								OnPlayback(localObj[i].name, localObj[i].code);
+							}
+						
+					}
+					}
+					if(onePoint && onePoint.code != "" && onePoint.code != undefined){
+						OnPlayback (onePoint.name,onePoint.code);
+						$(".width").find(".content").html(onePoint.name);
+					}
+				});
+			} else if (sp == "playback") {
+				$(".submit").one("click",function(){
+					if(back && back.length > 0 ){
+						LoginPlat();
+						for (var i = 0; i < back.length; i++) {
+							if(back[i].code != null && back[i].code != ""){							
+								OnPlayback(back[i].name, back[i].code);
+								}
+						}
+					}
+					
+				})
+				if(onePoint && onePoint.code != "" && onePoint.code != undefined){
+					OnPlayback (onePoint.name, onePoint.code);
+					$(".width").find(".content").html(onePoint.name);
+				}
+				$(".time li:eq(1)").click(function () {
+					if(back && back.length > 0){
+						LoginPlat();
+						for (var i = 0; i < back.length; i++) {
+							if(back[i].code != null && back[i].code != ""){
+								StartPreview(back[i].code);
+								}
+						}
+					}
+					if(onePoint && onePoint.code != "" && onePoint.code != undefined){
+						LoginPlat();
+						StartPreview (onePoint.code);
+					}
+				});
+			}
+			// 复选框勾选
+			for (var i = 0; i < child.length; i++) {
+				if (onePoint && onePoint.code != "" && onePoint.code != undefined) {
+					if (child[i].map) {
+						if (child[i].map.code == onePoint.code) {
+							 $(child[i].target).find("span.tree-checkbox").removeClass('tree-checkbox0').addClass('tree-checkbox1');
+							 $(child[i].target).css({
+									"background-color": "#aec1cb"
+								});
+						}
+					}
+				}
+				if (sp == "playreal") {
+					if (localObj && localObj.length > 0) {
+						for (var j = 0; j < local.length; j++) {
+							if (child[i].data.code) {
+								if (child[i].data.code == local[j]) {
+									$(child[i].target).find("span.tree-checkbox").removeClass('tree-checkbox0').addClass('tree-checkbox1');
+									$(child[i].target).css({
+										"background-color": "#aec1cb"
+									});								
+								}
+							}
+						}
+					}
+
+				} else if (sp == "playback") {
+					if (back) {
+						for (var j = 0; j < back.length; j++) {
+							if (child[i].data.code) {
+								if (child[i].data.code == back[j].code) {
+									$(child[i].target).find("span.tree-checkbox").removeClass('tree-checkbox0').addClass('tree-checkbox1');
+									$(child[i].target).css({
+										"background-color": "#aec1cb"
+									});
+									var text = back[j].name;
+									if (text != null && text != "" && text != undefined) {
+										var html = "<span>" + text + "</span>,<br>";
+										$(".width").find(".content").append(html);
+									}
+								}
+							}
+						}
+					}
+				}
+
+				if (child[i].type == "channel") {
+					$(child[i].target).find("span.tree-icon").removeClass('tree-folder').addClass('tree-file');
+					if (child[i].data.status == 1) {
+						$(child[i].target).find('.tree-file').css({
+							"background-image": "url(../img/online.png)",
+							"background-position": "0px 0px",
+							"background-size": "100%",
+							"filter": "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../img/online.png',sizingMethod='scale')"
+						})
+					}
+
+				} else if (child[i].type == "organization") {
+					$(child[i].target).find("span.tree-icon").removeClass('tree-file').addClass('tree-folder');
+				}
+			}
+		},		
+		onCheck: function (node, checked) {
+			// vedioTreeClick(node, checked);
+			nodes = $('#playreal_hk_tree').tree('getChecked');
+			$(".tree-node").removeClass("ylf_check");
+			for (var i = 0; i < nodes.length; i++) {
+				$(nodes[i].target).addClass("ylf_check");
+			}
+		},
+		onContextMenu: function (e, node) { // 给结点添加右键菜单
+			e.preventDefault(); // 阻止右键默认事件
+			if ($(e.target).parents(".tree-node").is(".ylf_check")) {
+				$('#parentNode').menu('show', {
+					left: e.pageX,
+					top: e.pageY
+				});
+			}
+		}
+	});
+
+	function StopPreview () {
+		var idx = preview.GetSelWnd();
+		preview.StopPreview(idx);
+	}
+	// 预览
+	$("#preview_video").click(function () {
+		vedio_views('playreal', 'hk', nodes);
+	})
+	// 回放
+	$("#back_video").click(function () {
+		vedio_views('playback', 'hk', nodes);
+	})
+
+	function GetRequest () {
+		var url = location.search; // 获取url中"?"符后的字串
+		var theRequest = new Object();
+		if (url.indexOf("?") != -1) {
+			var str = url.substr(1);
+			strs = str.split("&");
+			for (var i = 0; i < strs.length; i++) {
+				theRequest[strs[i].split("=")[0]] = unescape(strs[i].split("=")[1]);
+			}
+		}
+		return theRequest;
+	}
+
+	function vedio_views (playtype, brand, arr) {		
+		if (arr && arr.length > 0) {
+			if (playtype == "playreal" && brand == "hk") {
+				for (var i = 0; i < arr.length; i++) {					
+						StartPreview(arr[i].map.code);					
+				}
+				$(".submit").click(function(){
+					if(arr && arr.length > 0){
+						for (var i = 0; i < arr.length; i++) {
+							if(arr[i].map.code != ""){
+								OnPlayback(arr[i].text, arr[i].map.code);
+							}
+					 }
+					}
+				})
+				
+				$(".time li:eq(1)").one("click", function () {
+					$(".width").find(".content").empty();
+					if(arr && arr.length > 0){
+						for (var i = 0; i < arr.length; i++) {
+							if(arr[i].map.code != ""){
+								var text = arr[i].text;
+								if(text != null && text != "" && text != undefined){
+									var html = "<span>" + text + "</span>,<br>";
+									$(".width").find(".content").append(html);
+								}								
+								//StopPreview(local[i]);
+								OnPlayback(arr[i].text, arr[i].map.code);
+							}
+						
+					}
+					}
+					
+				});
+			} else if ((playtype == "playback" && brand == "hk")) {
+				$(".submit").one("click",function(){
+					if(arr && arr.length > 0 ){
+						for (var i = 0; i < arr.length; i++) {
+							if(arr[i].code != null && arr[i].code != ""){							
+								OnPlayback(arr[i].text, arr[i].map.code);
+								}
+						}
+					}
+					
+				})
+				
+				$(".time li:eq(1)").click(function () {
+					if(arr && arr.length > 0){
+						LoginPlat();
+						for (var i = 0; i < arr.length; i++) {
+							if(arr[i].code != null && arr[i].code != ""){
+								StartPreview(arr[i].map.code);
+								}
+						}
+					}
+					
+				});
+				$(".width").find(".content").empty();
+				for (var i = 0; i < arr.length; i++) {
+					var text = arr[i].text;
+					if(text != null && text != "" && text != undefined){
+						var html = "<span>" + text + "</span>,<br>";
+						$(".width").find(".content").append(html);
+					}
+					OnPlayback(arr[i].text, arr[i].map.code)
+				}
+			}
+		}
+	}
+	return;
+}
+function treeTitle (domId, node) {
+	if (node != null && node != "") {
+		var childList = $("#playreal_hk_tree").tree('getChildren', node.target);
+		for (var i = 0; i < childList.length; i++) {
+			$(childList[i].target).attr("title", childList[i].text);
+		}
+
+	}
+};
+
+// 回放
+function OnPlayback(name, code) {
+	if(code != null && code != "" && code != undefined){
+		var IP = document.getElementById("ip").value;
+		var port = document.getElementById("port").value;
+		var UserName = document.getElementById("UserName").value;
+		var BeginTime = $("#starttime").datetimebox("getValue");
+		var start = BeginTime.substring(0,10)+"T"+ BeginTime.substring(11,19)+".000Z";
+		var EndTime = $("#endtime").datetimebox("getValue");
+		var end = EndTime.substring(0,10)+"T"+ EndTime.substring(11,19)+".000Z";
+		var _param = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>" + 
+			"<PlaybackBasicInfo><CameraName>" + name + "</CameraName>" + 
+			"<ServerType>1</ServerType><ServerIP>" + IP 
+			+ "</ServerIP><ServerPort>6300</ServerPort>" 
+			+ "<BeginTime>"+start+"</BeginTime><EndTime>"+end+"</EndTime>" 
+			+ "<SupportKFImg>1</SupportKFImg><CuInfo><UserName>" + UserName + "</UserName><CuZoneId>1</CuZoneId>" 
+			+ "<CmsIp>" + IP + "</CmsIp><CmsPort>"+port+"</CmsPort><CmsContext></CmsContext>" 
+			+ "<VmsIp>" + IP + "</VmsIp><VmsPort>"+port+"</VmsPort><VmsContext></VmsContext></CuInfo>" 
+			+ "<RightCode>10034,10033,10032,10020,10027,10014,10001,10028,10002,10015,10005,10010,10024,10006,10011,10003,10021,10012,10022,10004,10013,10009,10029</RightCode>" 
+			+ "<CameraIndexCode>" + code + "</CameraIndexCode><DeviceInfo><DeviceName>Embedded Net DVR</DeviceName><DeviceIndexcode>" 
+			+ code + "</DeviceIndexcode>" + "<DeviceManufacturer>0</DeviceManufacturer><ProductSeries>1</ProductSeries></DeviceInfo><CascadeInfo><CascadeServerIp>" 
+			+ IP + "</CascadeServerIp>" + "<CascadeServerPort>null</CascadeServerPort></CascadeInfo><PlaybackPerformance><DecodeEffect>5</DecodeEffect></PlaybackPerformance></PlaybackBasicInfo>";
+		var _index = playback.GetIdleWndIndex();
+		playback.SetBasicInfo(_index, _param);
+	}
+	
+}
+
+// 预览
+function StartPreview (Code) {
+	if(Code != null && Code != "" && Code != undefined){
+		var _param = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Preview><CamIndexCode>" + Code + "</CamIndexCode></Preview>";
+		preview.StartPreview(_param);
+	}
+	
+}
+// 视频控件初始化
+function LoginPlat () {
+	// Demo默认使用密码登录方式
+	var IP = document.getElementById("ip").value;
+	var port = document.getElementById("port").value;
+	var UserName = document.getElementById("UserName").value;
+	var Password = document.getElementById("Password").value;
+	var v1 = "<?xml version=\"1.0\" encoding=\"utf-8\"?><LoginInfo><LoginType>2</LoginType><IP>" + IP + "</IP><Port>" + port + "</Port><UserName>" + UserName + "</UserName><Password>" + Password + "</Password></LoginInfo>";
+	// alert(v1);
+	var v = preview.LoginPlat(v1);
+	if (v != 0) {
+		alert("登录失败，请查看日志preview.log")
+		return;
+	}
+
+}

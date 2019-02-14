@@ -1,0 +1,2163 @@
+(function (window, z, plugin, $, undefined) {
+	if (z && plugin && !plugin.MapComPlugin) {
+		z.setMembers(plugin, {
+			MapComPlugin: function () {
+				plugin.BasePlugin.apply(this, arguments);
+			}
+		});
+		z.inherit(plugin.BasePlugin, plugin.MapComPlugin, {
+			loadMapSuccess: function () {
+				var $this = this;
+				$(".tool-container>ul>li").hover(function () {
+					$(this).children("div").addClass("active");
+					var ul = $(this).children("ul");
+					/*
+					 * if(ul.is("#layersul")){ ul.empty(); $.each(layerOptions,function(i,e){ ul.append(makeLi(e)); }); } function makeLi(options){ var layer = mapPlugin.graphicsLayers[options.name]; var div = $("<div/>").html(options.text); div.click(function(){ $(this).children("input").click(); }); var input = $("<input type=\"checkbox\" name=\"layers\" value=\""+options.name+"\"/>"); input.click(function(e){ e.stopPropagation(); layer = mapPlugin.graphicsLayers[options.name]; var flag = this.checked; if(flag){ this.checked = true; if(layer){ layer.show(); // 加载已删除的点 zMapComPlugin.getMapPoint.apply(window,[options,options.success]); }else{ $this.getMapPoint.apply(window,[options,options.success]); } }else{ this.checked = false; // 未选中则清除该图层上的点，隐藏图层 mapPlugin.removeGraphics(options.name); // 移除信息模板 hook.mapPlugin.hideInfoTemplate(); if(layer && layer.visible){ layer.hide(); } } }); if(layer && layer.visible){ input.attr("checked",true); } var li = $("<li/>").append(div.prepend(input)); return li; }
+					 */
+					ul.stop().slideDown();
+					$(this).children("div").children("i.show").hide();
+					$(this).children("div").children("i.hide").show();
+				}, function () {
+					$(this).children("div").removeClass("active");
+					$(this).children("ul").stop().slideUp();
+					$(this).children("div").children("i.show").show();
+					$(this).children("div").children("i.hide").hide();
+				});
+				$(".tool-container .measure").click(function () {
+					var type = $(this).data("type");
+					if (type) {
+						zMclPlugin.setMeasure(type, "#measureLi");
+					}
+				});
+
+				$(".tool-container .print").click(function () {
+					var type = $(this).data("type");
+					if (type) {
+						zMclPlugin.printMeasure(type, callback);
+						function callback (evt) {
+							hook.mapPlugin.removeGraphics("selectLayer");
+							zMapComPlugin.print(evt);
+						}
+					}
+				});
+
+				$(".tool-container .seach").click(function () {
+					var type = $(this).data("type");
+					if (type) {
+						if (type == "point") {
+							zMapElementParse.pointStatus = true;
+						} else if (type == "polygon") {
+							// 多边形选择设置单击结束多边形选择
+							var list;
+							if (!list) {
+								list = new Array()
+							}
+							var mapObjClick = mapObj.on("click", clickFinish);
+							function clickFinish (evt) {
+								var mp = evt.mapPoint;
+								list.push(mp.x, mp.y);
+								var xDistance = list[0] - mp.x;
+								var yDistance = list[1] - mp.y;
+								if (list.length > 7) {
+									if (mapPlugin.mapObj.getZoom() <= 10) {
+										if (-0.003 < xDistance && xDistance < 0.003 && -0.003 < yDistance && yDistance < 0.003) {
+											mapPlugin.drawToolbar.finishDrawing();
+											list = [];
+											mapObjClick.remove();
+										}
+									} else if (mapPlugin.mapObj.getZoom() > 10) {
+										if (-0.0005 < xDistance && xDistance < 0.0005 && -0.0005 < yDistance && yDistance < 0.0005) {
+											mapPlugin.drawToolbar.finishDrawing();
+											list = [];
+											mapObjClick.remove();
+										}
+									}
+								}
+							}
+
+							/* var pointLayer="vedioPointLayer"; */
+							var pointLayer = [
+									"vedioPointLayer", "Walkie", "BaseStation"
+							];
+							zMclPlugin.seachMeasure(type, this, pointLayer, callback);
+						} else {
+							/* var pointLayer="vedioPointLayer"; */
+							var pointLayer = [
+									"vedioPointLayer", "Walkie", "BaseStation"
+							];
+							zMclPlugin.seachMeasure(type, this, pointLayer, callback);
+						}
+
+						function callback (pointid) {
+							var div = $("#vedio_choose");
+							// 清除死数据
+							con = div.find("#bodylist");
+							con.empty();
+							con = div.find("#walkie_bodylist");
+							con.empty();
+							con = div.find("#baseStation_bodylist");
+							con.empty();
+							// 加载选择数据
+							if (pointid.vedioPointLayer) {
+								vedioChoose(pointid.vedioPointLayer);
+							}
+							if (pointid.Walkie) {
+								walkieChoose(pointid.Walkie);
+							}
+							if (pointid.BaseStation) {
+								baseStationChoose(pointid.BaseStation);
+							}
+							// 初始化标签按钮并打开标签
+							div.find(".vedio-choose-preview").off("click").click(function () {
+								// 预览
+								con = div.find("#bodylist");
+								var hkArr = [];								
+								con.find("input:checkbox[name='code']:checked").each(function (i,data) {
+									var obj =  {};
+									var code =$(this).val();
+									var name = $(this).attr("codename");
+									obj.code = code;
+									obj.name = name;
+									hkArr.push(obj);
+									var brand = $(this).attr("brand").replace("channel-brand-", "");
+									/*
+									 * if (brand == "hk") { hkArr = (hkArr != "" ? hkArr + "," + val : val); } else if (brand == "ys") { ysArr = (ysArr != "" ? ysArr + "," + val : val); }
+									 */
+								});
+								if (hkArr != "") {
+									zMapComPlugin.vedio_view1('playreal', 'hk', hkArr);									
+								}								
+							});
+
+							div.find(".vedio-choose-backview").off("click").click(function () {
+								// 回放
+								con = div.find("#bodylist");
+								var hkArr = [];
+								con.find("input:checkbox[name='code']:checked").each(function (i) {
+									var obj =  {};
+									var code =$(this).val();
+									var name = $(this).attr("codename");
+									obj.code = code;
+									obj.name = name;
+									hkArr.push(obj);
+									var brand = $(this).attr("brand").replace("channel-brand-", "");
+								});
+								if (hkArr != "") {
+									zMapComPlugin.vedio_view1('playback', 'hk', hkArr);									
+								}							
+							});
+
+							div.find(".vedio-choose-hk-exe").off("click").click(function () {
+								// 海康exe
+								con = div.find("#bodylist");
+								var hkArr = "";
+
+								con.find("input:checkbox[name='code']:checked").each(function (i) {
+									var val = $(this).val();
+									var brand = $(this).attr("brand").replace("channel-brand-", "");
+									if (brand == "hk") {
+										hkArr = (hkArr != "" ? hkArr + "," + val : val);
+									}
+								});
+								if (hkArr != "") {
+
+									z.request({
+										url: window.WEB_ROOT_PATH + "/vedio/getVedioData.json",
+										data: {
+											token: hkArr,
+											PalyType: "PlayReal",
+											httpsflag: "1",
+											brand: "hk"
+										},
+										success: function (args) {
+											if (args != null && args != "") {
+												var PalyType = args.PalyType;
+												var SvrIp = args.SvrIp;
+												var SvrPort = args.SvrPort;
+												var appkey = args.appkey;
+												var appSecret = args.appSecret;
+												var time = args.time;
+												var timeSecret = args.timeSecret;
+												var httpsflag = args.httpsflag;
+												var CamList = args.CamList;
+												// 主要是添加了'hikvideoclient://' 和 'VersionTag:artemis'2段字符串
+												var param = 'hikvideoclient://ReqType:' + PalyType + ';' + 'VersionTag:artemis' + ';' + 'SvrIp:' + SvrIp + ';' + 'SvrPort:' + SvrPort + ';' + 'Appkey:' + appkey + ';' + 'AppSecret:' + appSecret + ';' + 'time:' + time + ';' + 'timesecret:' + timeSecret + ';' + 'httpsflag:' + httpsflag + ';' + 'CamList:' + CamList + ';';
+												document.getElementById("vedio-choose-hk-url").src = param;
+											}
+										}
+									});
+								}
+
+							});
+
+							div.find(".vedio-choose-export").off("click").click(function () {
+								zMapComPlugin.videoDataExport("video");
+							});
+
+							div.find(".walkie-choose-export").off("click").click(function () {
+								zMapComPlugin.videoDataExport("walkie");
+							});
+
+							div.find(".baseStation-choose-export").off("click").click(function () {
+								zMapComPlugin.videoDataExport("baseStation");
+							});
+
+							div.find(".vedio-choose-close").off("click").click(function () {
+								parent.zMclPlugin.clearResult();
+								div.dialog("close");
+							});
+
+							div.find(".walkie-choose-close").off("click").click(function () {
+								parent.zMclPlugin.clearResult();
+								div.dialog("close");
+							});
+
+							div.find(".baseStation-choose-close").off("click").click(function () {
+								parent.zMclPlugin.clearResult();
+								div.dialog("close");
+							});
+
+							div.dialog("open");
+							if (pointid.vedioPointLayer) { // 查询结果默认选择
+								$("#choose_tabs").tabs('select', 0);
+							} else if (pointid.Walkie) {
+								$("#choose_tabs").tabs('select', 1);
+							} else if (pointid.BaseStation) {
+								$("#choose_tabs").tabs('select', 2);
+							}
+						}
+						// 加载选择视频数据
+						function vedioChoose (pointid) {
+							var div = $("#vedio_choose");
+							con = div.find("#bodylist");
+							var number = 1;
+							for (var i = 0, l = pointid.length; i < l; i++) {
+
+								var mar = pointid[i];
+								// 判断name，code，monitorBrandCode是否为undefined(排除标题点)
+								if (typeof (mar.name) != "undefined" && typeof (mar.code) != "undefined" && typeof (mar.monitorBrandCode) != "undefined" && typeof (mar.lon) != "undefined" && typeof (mar.lat) != "undefined") {
+									var htm = $("<div/>").addClass("bodylist").append($("<div/>").addClass("num fl").html(number++)).append($("<div/>").addClass("checkbox fl").html('<input type="checkbox" value="' + mar.code + '" name="code" codeName="' + mar.name + '" brand="' + mar.monitorBrandCode + '" onclick="checkclick(this);"><input type="hidden" value="' + mar.lon + '" name="lon"><input type="hidden" value="' + mar.lat + '" name="lat">')).append($("<div/>").addClass("text_name fl").html(mar.name)).append($("<div/>").addClass("num_shebei fl").html(mar.monitorBrandCode.replace("channel-brand-", "") == "hk" ? "海康" : (mar.monitorBrandCode.replace("channel-brand-", "") == "ys" ? "宇视" : "")));
+									con.append(htm);
+								}
+							}
+						}
+						// 加载选择对讲机数据
+						function walkieChoose (pointid) {
+							var div = $("#vedio_choose");
+							con = div.find("#walkie_bodylist");
+							var number = 1;
+							for (var i = 0, l = pointid.length; i < l; i++) {
+
+								var mar = pointid[i];
+								// 判断属性是否为undefined(排除标题点)
+								if (typeof (mar.lon) != "undefined" && typeof (mar.lat) != "undefined") {
+									var htm = $("<div/>").addClass("walkie_bodylist").append($("<div/>").addClass("walkie_num_text fl").html(number++)).append($("<div/>").addClass("walkie_name_text fl").html(mar.name ? mar.name : "&nbsp;")).append($("<div/>").addClass("walkie_lon_text fl").html(mar.lon)).append($("<div/>").addClass("walkie_lat_text fl").html(mar.lat));
+									con.append(htm);
+								}
+							}
+						}
+						// 加载选择基站数据
+						function baseStationChoose (pointid) {
+							var div = $("#vedio_choose");
+							con = div.find("#baseStation_bodylist");
+							var number = 1;
+							for (var i = 0, l = pointid.length; i < l; i++) {
+
+								var mar = pointid[i];
+								// 判断属性是否为undefined(排除标题点)
+								if (typeof (mar.lon) != "undefined" && typeof (mar.lat) != "undefined") {
+									var htm = $("<div/>").addClass("walkie_bodylist").append($("<div/>").addClass("baseStation_num_text fl").html(number++)).append($("<div/>").addClass("baseStation_name_text fl").html(mar.name ? mar.name : "&nbsp;")).append($("<div/>").addClass("baseStation_unit_text fl").html(mar.monitorBrandCode ? mar.monitorBrandCode : "")).append($("<div/>").html('<input type="hidden" value="' + mar.lon + '" name="lon"><input type="hidden" value="' + mar.lat + '" name="lat">'));
+									con.append(htm);
+								}
+							}
+						}
+
+						/*
+						 * function callback(pointid){ var div=$("#vedio_choose"); con=div.find("#bodylist"); con.empty(); // 初始化查询序号 var number = 1; for(var i=0,l=pointid.length;i<l;i++){
+						 * 
+						 * var mar = pointid[i]; // 判断name，code，monitorBrandCode是否为undefined(排除标题点) if (typeof(mar.name) != "undefined" && typeof(mar.code) != "undefined" && typeof(mar.monitorBrandCode) != "undefined") { var htm = $("<div/>").addClass("bodylist") .append($("<div/>").addClass("num fl").html(number++)) .append($("<div/>").addClass("checkbox fl").html('<input type="checkbox" value="' + mar.code + '" name="code" brand="' + mar.monitorBrandCode + '" onclick="checkclick(this);"><input type="hidden" value="' + mar.lon + '" name="lon"><input type="hidden" value="' + mar.lat + '" name="lat">')) .append($("<div/>").addClass("text_name fl").html(mar.name)) .append($("<div/>").addClass("num_shebei fl").html(mar.monitorBrandCode.replace("channel-brand-", "") == "hk" ? "海康" : (mar.monitorBrandCode.replace("channel-brand-", "") == "ys" ? "宇视" : ""))); con.append(htm); } }
+						 * 
+						 * div.find(".vedio-choose-preview").off("click").click(function(){ // 预览 var hkArr = ""; var ysArr = ""; con.find("input:checkbox[name='code']:checked").each(function (i) { var val = $(this).val(); var brand = $(this).attr("brand").replace("channel-brand-", ""); if (brand == "hk") { hkArr = (hkArr != "" ? hkArr + "," + val : val); } else if (brand == "ys") { ysArr = (ysArr != "" ? ysArr + "," + val : val); } }); if (hkArr != "") { z.plugin.MclPlugin.instance.vedio_views('playreal', 'hk', hkArr); } if (ysArr != "") { z.plugin.MclPlugin.instance.vedio_views('playview', 'ys', ysArr); }
+						 * 
+						 * });
+						 * 
+						 * div.find(".vedio-choose-backview").off("click").click(function(){ // 回放 var hkArr = ""; var ysArr = ""; con.find("input:checkbox[name='code']:checked").each(function (i) { var val = $(this).val(); var brand = $(this).attr("brand").replace("channel-brand-", ""); if (brand == "hk") { hkArr = (hkArr != "" ? hkArr + "," + val : val); } else if (brand == "ys") { ysArr = (ysArr != "" ? ysArr + "," + val : val); } }); if (hkArr != "") { z.plugin.MclPlugin.instance.vedio_views('playback', 'hk', hkArr); } if (ysArr != "") { z.plugin.MclPlugin.instance.vedio_views('playback', 'ys', ysArr); } });
+						 * 
+						 * div.find(".vedio-choose-hk-exe").off("click").click(function () { // 海康exe var hkArr = "";
+						 * 
+						 * con.find("input:checkbox[name='code']:checked").each(function (i) { var val = $(this).val(); var brand = $(this).attr("brand").replace("channel-brand-", ""); if (brand == "hk") { hkArr = (hkArr != "" ? hkArr + "," + val : val); } }); if (hkArr != "") {
+						 * 
+						 * z.request({ url: window.WEB_ROOT_PATH + "/vedio/getVedioData.json", data: { token: hkArr, PalyType: "PlayReal", httpsflag: "1", brand: "hk" }, success: function (args) { if (args != null && args != "") { var PalyType = args.PalyType; var SvrIp = args.SvrIp; var SvrPort = args.SvrPort; var appkey = args.appkey; var appSecret = args.appSecret; var time = args.time; var timeSecret = args.timeSecret; var httpsflag = args.httpsflag; var CamList = args.CamList; // 主要是添加了'hikvideoclient://' 和 'VersionTag:artemis'2段字符串 var param = 'hikvideoclient://ReqType:' + PalyType + ';' + 'VersionTag:artemis' + ';' + 'SvrIp:' + SvrIp + ';' + 'SvrPort:' + SvrPort + ';' + 'Appkey:' + appkey + ';' + 'AppSecret:' + appSecret + ';' + 'time:' + time + ';' + 'timesecret:' + timeSecret + ';' + 'httpsflag:' + httpsflag + ';' + 'CamList:' + CamList + ';'; document.getElementById("vedio-choose-hk-url").src = param; } } }); }
+						 * 
+						 * });
+						 * 
+						 * div.find(".vedio-choose-export").off("click").click(function(){ zMapComPlugin.videoDataExport(); });
+						 * 
+						 * div.find(".vedio-choose-close").off("click").click(function(){ div.dialog("close"); });
+						 * 
+						 * div.dialog("open"); }
+						 */
+					}
+				});
+
+				$("#mapControl").hover(function () {
+					var children = $(this).children();
+					children.each(function () {
+						$(this).click(function () {
+							mapPlugin.setGbLayers(Number($(this).data("basemap")));
+							$(this).siblings().removeClass("active");
+							$(this).addClass("active");
+						});
+						$(this).stop().animate({
+							width: "120px"
+						});
+					});
+				}, function () {
+					$(this).children().off("click");
+					var children = $(this).children().not(".active");
+					children.each(function () {
+						$(this).stop().animate({
+							width: "10px"
+						});
+					});
+				});
+
+				// 初始化只显示一个地图
+				var children = $("#mapControl").children(".active");
+				children.each(function () {
+					mapPlugin.setGbLayers(Number($(this).data("basemap")));
+				});
+
+				// 地图改变监听事件
+				this.mapObj.on("extent-change", changeHandler);
+				function changeHandler (mapObj) {
+					var Xmin = mapObj.extent.xmin;
+					var Xmax = mapObj.extent.xmax;
+					var Ymin = mapObj.extent.ymin;
+					var Ymax = mapObj.extent.ymax;
+					$('#layersul').find('input').each(function () {
+						var layerName = $(this).val();
+						if (!layerName) {
+							return;
+						}
+						layer = mapPlugin.graphicsLayers[layerName];
+						if (layer) {
+							layer.show();
+						}
+						// 移除信息模板
+						hook.mapPlugin.hideInfoTemplate();
+						// 选中时加载区域内选中属性的点
+						if ($(this).prop("checked")) {
+							// 清除指定图层上的所有图形
+							// mapPlugin.removeGraphics(layerName);
+							// 清除区域外的点，加载区域内的点
+							if (layer) {
+								var graphics = layer.graphics;
+								for (var i = graphics.length - 1, l = 0; i >= l; i--) {
+									if (graphics[i] && graphics[i].geometry) {
+										var x = graphics[i].geometry.x;
+										var y = graphics[i].geometry.y;
+										if (x > Xmin && x < Xmax && y > Ymin && y < Ymax) {
+										} else {
+											mapPlugin.removeGraphic(graphics[i]);
+										}
+									}
+								};
+							}
+							if (layerName == "vedioPointLayer") {
+								zMapComPlugin.getMapPoint(layerOptions[0]);
+							} else if (layerName == "Walkie") {
+								zMapComPlugin.getMoveGps(layerOptions[1]);
+							} else if (layerName == "BaseStation") {
+								zMapComPlugin.getMapPoint(layerOptions[2]);
+							} else if (layerName == "MACAddress") {
+								zMapComPlugin.getMapPoint(layerOptions[3]);
+							} else if (layerName == "vehicle4G") {
+								zMapComPlugin.getMapPoint(layerOptions[4]);
+							} else if (layerName == "jjdPointLayer") {
+								zMapComPlugin.getMapPoint(layerOptions[5]);
+							}
+						} else {
+							// 未选中则清除该图层上的点
+							/*
+							 * if (layer) { mapPlugin.removeGraphics(layerName); layer.hide(); }
+							 */
+						}
+					})
+
+					// 加载搜索点
+					var seachId = $("dl.SSDJ").attr("id");
+					// var type = $("dl.SSDJ").attr("name");
+					if (seachId) {
+						zMapComPlugin.getSearchPointMap();
+					}
+				};
+
+				window.layerOptions = [
+						{
+							name: "vedioPointLayer",
+							text: "视频监控",
+							url: window.WEB_ROOT_PATH + "/vedio/channel/datagrid.json",
+							targetTable: "vedio",
+							data: {
+								fields: "id,name,lon,lat,code,monitorBrandCode,status,monitorCategoryName,alt",
+								page: 1,
+								rows: 2000
+							},
+							param: {
+								x: "lon",
+								y: "lat",
+								id: "id",
+								name: "name",
+								targetId: "id",
+								code: "code",
+								monitorBrandCode: "monitorBrandCode",
+								monitorCategoryName: "monitorCategoryName",
+								alt: "alt"
+							},
+							marker: {
+								markerImgPath: window.WEB_ROOT_PATH + "/img/z-lyspjk/map/event4.png",
+								markerImgW: 20,
+								markerImgH: 20
+							},
+							attributes: {
+								brand: "",
+								htmlColor: "#00BFFF" // 添加默认颜色
+							}
+						}, {
+							name: "Walkie",
+							text: "对讲机",
+							url: window.WEB_ROOT_PATH + "/gps/position/getGpsDate.json",
+							targetTable: "Walkie",
+							data: {
+								fields: "id,name,lon,lat,deviceId,patrolPersontName,status",
+								page: 1,
+								rows: 2000
+							},
+							param: {
+								x: "lon",
+								y: "lat",
+								id: "id",
+								name: "name",
+								targetId: "id"
+							},
+							marker: {
+								markerImgPath: window.WEB_ROOT_PATH + "/img/z-lyspjk/map/walkie.png",
+								markerImgW: 30,
+								markerImgH: 30,
+								htmlColor: "#00BFFF" // 添加默认颜色
+							},
+							attributes: {
+								brand: ""
+							}
+						}, {
+							name: "BaseStation",
+							text: "基站",
+							url: window.WEB_ROOT_PATH + "/vedio/socialres/datagrid.json",
+							targetTable: "BaseStation",
+							data: {
+								fields: "id,name,lon,lat,status",
+								page: 1,
+								rows: 2000
+							},
+							param: {
+								x: "lon",
+								y: "lat",
+								id: "id",
+								name: "name",
+								targetId: "id"
+							},
+							marker: {
+								markerImgPath: window.WEB_ROOT_PATH + "/img/z-lyspjk/map/basestation.png",
+								markerImgW: 30,
+								markerImgH: 30,
+								htmlColor: "#00BFFF" // 添加默认颜色
+							},
+							attributes: {
+								brand: ""
+							}
+						}, {
+							name: "MACAddress",
+							text: "mac地址",
+							url: window.WEB_ROOT_PATH + "/vedio/macaddress/datagrid.json",
+							targetTable: "MACAddress",
+							data: {
+								fields: "id,name,lon,lat",
+								page: 1,
+								rows: 2000
+							},
+							param: {
+								x: "lon",
+								y: "lat",
+								id: "id",
+								name: "name",
+								targetId: "id"
+							},
+							/*
+							 * marker: { markerImgPath: window.WEB_ROOT_PATH + "/img/z-lyspjk/map/mac.png", markerImgW: 30, markerImgH: 30, htmlColor: "#00BFFF" // 添加默认颜色 },
+							 */
+							attributes: {
+								brand: ""
+							}
+						}, {
+							name: "vehicle4G",
+							text: "车载4G",
+							url: window.WEB_ROOT_PATH + "/vedio/vehicle4G/datagrid.json",
+							targetTable: "vehicle4G",
+							data: {
+								fields: "id,name,lon,lat",
+								page: 1,
+								rows: 2000
+							},
+							param: {
+								x: "lon",
+								y: "lat",
+								id: "id",
+								name: "name",
+								targetId: "id"
+							},
+							/*
+							 * marker: { markerImgPath: window.WEB_ROOT_PATH + "/img/z-lyspjk/map/mac.png", markerImgW: 30, markerImgH: 30, htmlColor: "#00BFFF" // 添加默认颜色 },
+							 */
+							attributes: {
+								brand: ""
+							}
+						}, {
+							name: "jjdPointLayer",
+							text: "警情图层",
+							url: window.WEB_ROOT_PATH + "/caseinfo/jjd/datagrid.json",
+							targetTable: "jjd",
+							data: {
+								fields: "jjdbh,jjdwmc,dhdwjd,dhdwwd",
+								sort: "bjsj",
+								startTime: z.date.getString(z.date.addDays(new Date(), -1), "yyyy-MM-dd HH:mm:ss"),
+								endTime: z.date.getString(new Date(), "yyyy-MM-dd HH:mm:ss")
+							},
+							param: {
+								x: "dhdwjd",
+								y: "dhdwwd",
+								id: "jjdbh",
+								name: "jjdwmc",
+								targetId: "jjdbh"
+							},
+							marker: {
+								markerImgPath: window.WEB_ROOT_PATH + "/img/z-lyspjk/map/event3.png",
+								markerImgW: 30,
+								markerImgH: 30
+							}
+						}
+				];
+				// 侧边栏tab切换
+	 	 		$("#map_query_type").find("li").on("click",function(){	 	 			
+					var type = $(this).find("div").attr("class");					
+					$(this).addClass("active").siblings().removeClass('active');
+						zMapComPlugin.getSearchdata(type);
+					});
+	 	 		
+				$(".sch a").click(function () {
+					var type = $("#map_query_type").find("li.active").find("div").attr("class");
+					zMapComPlugin.getSearchdata(type);
+				})
+
+			},
+			initObjectTimer: function () {
+				var $this = this;
+				setInterval(function () {
+					if (mapPlugin && mapPlugin.graphicsLayers["trackobjectPointLayer"]) {
+						var carGraphics = mapPlugin.graphicsLayers["trackobjectPointLayer"].graphics;
+						for (var i = 0, l = carGraphics.length; i < l; i++) {
+							var data = carGraphics[i];
+							if (data && data.attributes.gpsTime && new Date().getTime() - new Date(data.attributes.gpsTime).getTime() > 300000) {
+								var options = {
+									lon: data.geometry.x,
+									lat: data.geometry.y,
+									url: "/z-pluginPlat-qzyj/img/z-qzyj/map/car1.png",
+									status: "offline"
+								}
+								$this.movePoint("trackobjectPointLayer", carGraphics[i], options);
+							}
+						}
+					}
+				}, 5000);
+			},
+			initCommandListener: function () {
+				var $this = this;
+				// 更新点位坐标
+				z.command.addEvent("updatePoint", function (args, timespan, engine) {
+					var data = args.data;
+					if (data) {
+						zMapComPlugin.movePointTwo("Walkie", data);
+						/*
+						 * return; var layers = mapObj.getLayersVisibleAtScale(); var flag = 0; for (var ii = 0, len = layers.length; ii < len; ii++) { // 定义跳出图层循环 if (flag >= 2) { break; } var layer = layers[ii]; var carGraphics = layer.graphics; if (carGraphics && carGraphics.length > 0) { for (var i = carGraphics.length - 1, l = 0; i >= l; i--) { // 定义跳出点更新循环 if (flag >= 2) { break; } // 更新图标 if (carGraphics[i] && carGraphics[i].id == data.id && data.lon && data.lat) { var options={ lon:data.lon, lat:data.lat, url: "", status:"online", gpsTime:data.gpsTime, type:"", angle:0, monitorCategoryName:"" } // 更新点位判断是视频还是对讲机 if(carGraphics[i].themeName == "Walkie" ){ options.url = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/walkie.png"; options.type = "Walkie"; }else if(carGraphics[i].themeName == "vedioPointLayer" ){ options.type = "vedioPointLayer"; options.monitorCategoryName = carGraphics[i].monitorCategoryName; options.angle = carGraphics[i].angle; var node = { attributes:{ htmlColor: "", markerImgPath: window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio.png" } }; zMapComPlugin.setColorAndStstusName(options.type,options,node,null); options.angle = 0; options.url = node.attributes.monitorCategoryName; } if (options.url != "" && options.type != "") { $this.movePoint(options.type,carGraphics[i],options); flag = flag + 1; } // break; } // 更新标题 if (carGraphics[i] && carGraphics[i].textId == data.id && data.lon && data.lat) { var options={ lon:data.lon, lat:data.lat, type:"" } // 更新点位判断是视频还是对讲机 if(carGraphics[i].themeName == "Walkie" ){ options.type = "Walkie"; }else if(carGraphics[i].themeName == "vedioPointLayer" ){ options.type = "vedioPointLayer"; } if (options) { $this.movePoint(options.type,carGraphics[i],options); flag = flag + 1; } // break; } } } }
+						 */
+					}
+				});
+			},
+			movePoint: function (layerName, point, options) {
+				if (options) {
+					// 移除信息模板
+					hook.mapPlugin.hideInfoTemplate();
+
+					mapPlugin.graphicsLayers[layerName].remove(point);
+					point.geometry.setX(options.lon);
+					point.geometry.setY(options.lat);
+					if (options.status && options.status.length > 0) {
+						point.attributes.status = options.status;
+					}
+					if (options.url && options.url.length > 0) {
+						point.symbol.url = options.url;
+					}
+					if (options.angle) {
+						point.symbol.angle = options.angle;
+					}
+					if (options.gpsTime && options.gpsTime.length > 0) {
+						point.attributes.gpsTime = options.gpsTime;
+					}
+					mapPlugin.graphicsLayers[layerName].add(point);
+				}
+			},
+			showLayer: function (options, success) {
+				var $this = this;
+				var layer = mapPlugin.graphicsLayers[options.name];
+				if (layer) {
+					layer.show();
+				} else {
+					zMapComPlugin.getMapPoint.apply($this, arguments);
+				}
+			},
+			getMapPoint: function (options, success) {
+				var rows = [];
+				if (options.rows) {
+					rows = options.rows;
+				}
+				var $this = this;
+				// 获取当前区域
+				if (options.data.lonMin && options.data.latMin && options.data.lonMax && options.data.latMax) {
+					options.data.lonMin = mapPlugin.mapObj.extent.xmin;
+					options.data.latMin = mapPlugin.mapObj.extent.ymin;
+					options.data.lonMax = mapPlugin.mapObj.extent.xmax;
+					options.data.latMax = mapPlugin.mapObj.extent.ymax;
+				} else {
+					ddOption = {
+						lonMin: mapPlugin.mapObj.extent.xmin,
+						latMin: mapPlugin.mapObj.extent.ymin,
+						lonMax: mapPlugin.mapObj.extent.xmax,
+						latMax: mapPlugin.mapObj.extent.ymax
+					}
+					$.extend(true, options.data, ddOption);
+				}
+				if (mapPlugin.graphicsLayers[options.name]) {
+					var graphic = mapPlugin.graphicsLayers[options.name].graphics;
+				}
+				if (!options.url || !options.name || !options.targetTable) {
+					return
+
+				}
+				var dOption = {
+					x: "x",
+					y: "y",
+					id: "id",
+					name: "name",
+					targetId: "id",
+					code: "code",
+					monitorBrandCode: "monitorBrandCode",
+					status: "status", // 添加状态
+					monitorCategoryName: "monitorCategoryName",
+					alt: "alt",
+					gpsTime: "gpsTime",
+					type: "type"
+				}
+				$.extend(true, dOption, options.param);
+				z.request({
+					url: options.url,
+					data: options.data ? options.data : {},
+					success: function (data) {
+
+						// 设置对讲机的返回时间
+						if (data && data.backTime) {
+							var backTime = data.backTime;
+						}
+						if (data && data.rows && data.rows.length) {
+							if (options.clusterLayer) {
+								var clusterData = [], clusterField = [];
+								if (options.popupTemplate && options.popupTemplate.fieldInfos) {
+									$.each(options.popupTemplate.fieldInfos, function (i, e) {
+										clusterField.push(e.fieldName);
+									});
+								}
+								$.each(data.rows, function (i, e) {
+									if (e[dOption.x] && e[dOption.y]) {
+										var data = {
+											x: e[dOption.x],
+											y: e[dOption.y]
+										};
+										var attributes = {
+
+										};
+										$.each(clusterField, function (ii, ee) {
+											attributes[ee] = e[ee];
+										});
+										data["attributes"] = attributes;
+										clusterData.push(data);
+									}
+								});
+
+								mapPlugin.addClusters(clusterData, options.popupTemplate);
+							} else {
+								$.each(data.rows, function (i, e) {
+									// 判断该点是否存在
+									if (graphic) {
+										var flag = 0;
+										for (var i = 0, l = graphic.length; i < l; i++) {
+											if (graphic[i] && graphic[i].geometry) {
+												var gg = graphic[i];
+												// 警情没有id字段，jjdbh代表警情的唯一
+												if (gg.id == e.id) {
+													flag = flag + 1;
+												}
+											}
+										}
+										if (flag > 0) {
+											return true;
+										}
+									}
+
+									if (e[dOption.x] && e[dOption.y]) {
+										var node = {};
+										node.text = options.name;
+										node.attributes = options.marker ? options.marker : {};
+										var data = {
+											x: e[dOption.x],
+											y: e[dOption.y],
+											id: e[dOption.id],
+											name: e[dOption.name],
+											targetTable: options.targetTable,
+											targetId: e[dOption.targetId],
+											code: e[dOption.code],
+											monitorBrandCode: e[dOption.monitorBrandCode],
+											status: e[dOption.status],
+											monitorCategoryName: e[dOption.monitorCategoryName],
+											angle: e[dOption.alt],
+											gpsTime: e[dOption.gpsTime],
+											backTime: backTime,
+											type: e[dOption.type]
+
+										}
+
+										var dData = {};
+										var sData = (options.attributes && options.attributes.sData) ? options.attributes.sData : {};
+										if (options.attributes && options.attributes.dData) {
+											$.each(options.attributes.dData, function (ii, ee) {
+												var str = "";
+												e;
+												if (ee instanceof Array) {
+													$.each(ee, function (iii, eee) {
+														str += "['" + eee + "']";
+													});
+												} else {
+													str = "['" + ee + "']";
+												}
+												dData[ii] = eval("e" + str);
+											});
+										}
+										// 设置文字标题颜色和摄像头状态
+										zMapComPlugin.setColorAndStstusName(options.name, data, node, rows);
+										zMapComPlugin.pictureOffset(options.name, data, 1);
+										/*
+										 * if (options.name == "vedioPointLayer") { node.attributes.htmlColor = "#ffffff"; if (typeof(data.status) != "undefined" && data.monitorBrandCode) { if (data.status == "1") { node.attributes.htmlColor = "#00FF00"; data.status = "在线"; } else if (data.status == "0" && data.monitorBrandCode.replace("channel-brand-", "") == "hk") { node.attributes.htmlColor = "#ff0000"; data.status = "离线"; } else if (data.status == "2" && data.monitorBrandCode.replace("channel-brand-", "") == "ys") { node.attributes.htmlColor = "#ff0000"; data.status = "离线"; } else { data.status = "无状态"; } } else { data.status = "无状态"; } }
+										 */
+										var g = zMclPlugin.addGeometryTypes(node, data, false);
+										g.setAttributes($.extend({}, sData, dData));
+									}
+								});
+							}
+
+						}
+						if (typeof (success) == "function") {
+							success.apply($this, arguments);
+						} else if (typeof (options.success) == "function") {
+							options.success.apply($this, arguments);
+						}
+
+						// 搜索结果点击显示信息模板
+						var seachId = $("dl.SSDJ").attr("id");
+						if (seachId) {
+							var graphics2 = mapPlugin.graphicsLayers[options.name].graphics;
+							for (var i = 0, l = graphics2.length; i < l; i++) {
+								if (graphics2[i] && graphics2[i].geometry) {
+									var gg = graphics2[i];
+									if (gg.id == seachId) {
+										mapPlugin.showInfoTemplate(gg);
+										$("dl.current").removeClass("SSDJ");
+										break;
+									}
+								}
+							}
+						}
+
+					}
+				}, true);
+			},
+			updateMapZoom: function (newValue, oldValue) {
+				if (hook.mapPlugin.getZoom() != newValue) {
+					hook.mapPlugin.setZoom(newValue);
+				}
+			},
+			// 人车定位
+			trackPoint: function (id) {
+				var $this = this;
+				var success = function () {
+					var mapwindow = this;
+					if (mapwindow.mapPlugin.graphicsLayers.trackobjectPointLayer) {
+						var data = mapwindow.mapPlugin.graphicsLayers.trackobjectPointLayer.graphics;
+						$.each(data, function (i, e) {
+							if (e.unitInfoId == id) {
+								$this.setCenterInfo(e);
+							} else {
+								// e.hide();
+							}
+						});
+					}
+				}
+				if (!mapPlugin.graphicsLayers.trackobjectPointLayer) {
+					$.each(layerOptions, function (i, e) {
+						if (e.name == "trackobjectPointLayer") {
+							$this.showLayer.apply(window, [
+									e, success
+							]);
+						}
+					});
+				} else {
+					success.apply(window, []);
+				}
+			},
+			setCenterInfo: function (graphic, level) {
+				require([
+					"dojo/on"
+				], function (on) {
+					on.once(mapObj, "extent-change", function (args) {
+						mapPlugin.showInfoTemplate(graphic);
+					});
+					mapPlugin.setCenter(graphic.geometry, level ? level : 10);
+				});
+			},
+			toolArrowshow: function () {// 右边搜素框收缩展开
+				$("#qzyj_tool .tool_arrow").click(function () {
+					var left = $("#qzyj_tool").css("left");
+					if (left == "0px") {
+						$("#qzyj_tool").animate({
+							"left": "-310px"
+						});
+						$("#qzyj_tool .tool_arrow").find("i.hide").hide();
+						$("#qzyj_tool .tool_arrow").find("i").not(".hide").show();
+
+						$("#dynamicPoint").animate({
+							"left": "0"
+						});
+					} else if (left == "-310px") {
+						$("#qzyj_tool").animate({
+							"left": "0px"
+						});
+						$("#qzyj_tool .tool_arrow").find("i.hide").show();
+						$("#qzyj_tool .tool_arrow").find("i").not(".hide").hide();
+						$("#dynamicPoint").animate({
+							"left": "310px"
+						});
+					}
+				});
+			},
+
+			treeTitle: function (domId, node) {
+				if (node != null && node != "") {
+					var childList = $("#rcmc_1").tree('getChildren', node.target);
+					for (var i = 0; i < childList.length; i++) {
+						$(childList[i].target).attr("title", childList[i].text);
+						}
+					
+				}
+			},
+			vedioTreeClick: function (node, checked) {
+				var type = node.type;												
+				var currenttree = $("#rcmc_1");
+				if (type == "org") {
+					var childList = currenttree.tree('getChildren', node.target);
+					if (childList && childList.length > 0) {
+						$.each(childList, function (i, e) {
+							if (checked) {
+								currenttree.tree("check", e.target);
+								zMapComPlugin.addMapPoint("vedioPointLayer", e, window.layerOptions[0]);
+							} else {
+								currenttree.tree("uncheck", e.target);
+								zMapComPlugin.removeMapPoint("vedioPointLayer", e.id);
+							}
+						})
+					}
+				} else if (type == "channel") {
+					node.lon = node.map.lon; 
+					node.lat = node.map.lat; 
+					node.status = node.map.status;
+					node.code = node.map.code;
+					node.name = node.text;
+					node.monitorCategoryName = node.map.monitorCategoryName;
+					node.monitorBrandCode = node.map.monitorBrandCode;
+					var parent = currenttree.tree('getParent', node.target);
+					var child = parent.children;
+					var flag = false;
+					if (child && child.length > 0) {
+						for (var i = 0; i < child.length; i++) {
+							if (!child[i].checked) {
+								flag = true;
+								break;
+							}
+						}
+						if (flag) {
+							parent.checked = false;
+							var ssdf = $(parent.target).find('.tree-checkbox1');
+							ssdf.removeClass('tree-checkbox1');
+							ssdf.addClass('tree-checkbox0');
+						} else {
+							parent.checked = true;
+							var ssdf = $(parent.target).find('.tree-checkbox0');
+							ssdf.removeClass('tree-checkbox0');
+							ssdf.addClass('tree-checkbox1');
+						}
+					}
+					if (checked) {
+						zMapComPlugin.addMapPoint("vedioPointLayer", node, window.layerOptions[0]);
+						zMapComPlugin.setCenter(node.map.lon, node.map.lat);
+					} else {
+						zMapComPlugin.removeMapPoint("vedioPointLayer", node.id);
+					}
+				} else {
+					alert("未知节点");
+				}
+			},
+			treeTitle:function(domId, node) {
+				if (node != null && node != "") {
+					var childList = $("#rcmc_1").tree('getChildren', node.target);
+					for (var i = 0; i < childList.length; i++) {
+						$(childList[i].target).attr("title", childList[i].text);
+					}
+
+				}
+			},
+			// 搜索结果展示
+			getSearchdata: function (type) {
+				var $this = this;
+				// var type = $("#map_query_type").val();
+				var content = $("#map_query_content").val();
+				// 搜索框未输入，不执行
+				var typeCopy = $("#map_query_type_copy").val();
+				var contentCopy = $("#map_query_content_copy").val();
+				if (type == typeCopy && content == contentCopy) {
+					return;
+				} else {
+					$("#map_query_type_copy").val(type);
+					$("#map_query_content_copy").val(content);
+				}
+				if (type) {
+					if (type == "event") {						
+						var data;
+						$('#rcmc_1').tree({
+							// url:window.WEB_ROOT_PATH + "/vedio/channel/tree2.json?sort=sortIndex%20code%20name&order=asc&content=" + encodeURI(content),
+							url: window.WEB_ROOT_PATH + "/system/selfOrg/selfOrgAndChannelTree.json?sort=sortIndex%20code%20name&order=asc&content=" + encodeURI(content),
+							checkbox: true,
+							onBeforeLoad: function () {
+								zMclPlugin.clearResult("clear");
+							},
+							onLoadSuccess: function (node, data) {
+								zMapComPlugin.treeTitle('rcmc_1', data);// 判断在线离线
+								nodes = [];
+								$(".tree-file").css({
+									"background-image": "url(../img/outline.png)",
+									"background-position": "0px 0px",
+									"filter": "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../img/outline.png',sizingMethod='scale')"
+								})
+								var child = $('#rcmc_1').tree('getChildren', data.target);
+								for (var i = 0; i < child.length; i++) {
+										if (child[i].type == "channel") {			
+										if (child[i].map.status == 1) {
+											$(child[i].target).find('.tree-file').css({
+												"background-image": "url(../img/online.png)",
+												"background-position": "0px 0px",
+												"background-size": "100%",
+												"filter": "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../img/online.png',sizingMethod='scale')"
+											})
+										}
+
+									} else if (child[i].type == "org") {
+										$(child[i].target).find("span.tree-icon").removeClass('tree-file').addClass('tree-folder');
+									}
+								}
+
+							},
+
+							onCheck: function (node, checked) {
+								zMapComPlugin.vedioTreeClick(node, checked);
+								nodes = $('#rcmc_1').tree('getChecked');
+								$(".tree-node").removeClass("ylf_check");
+								for (var i = 0; i < nodes.length; i++) {
+									$(nodes[i].target).addClass("ylf_check");
+								}
+								
+							},
+							onContextMenu: function (e, node) { // 给结点添加右键菜单
+								e.preventDefault(); // 阻止右键默认事件
+								// console.log($(e.target).parents(".tree-node").is(".ylf_check"))
+								if ($(e.target).parents(".tree-node").is(".ylf_check")) {
+									$('#parentNode').menu('show', {
+										left: e.pageX,
+										top: e.pageY
+									});
+								}
+							}
+						});
+						// 预览
+						$("#preview1").click(function () {							
+							zMapComPlugin.vedio_view1('playreal','hk',nodes);
+						})
+						// 回放
+							$("#back1").click(function () {
+								zMapComPlugin.vedio_view1('playback','hk',nodes);							
+						})
+
+						/*
+						 * // 异步加载 function append(args){ var node = $('#rcmc_1').tree('getSelected'); $('#rcmc_1').tree('append',{ parent: node.target, data:args }); var type = node.type; var currenttree = $("#rcmc_1"); if (type == "organization") { var childList = currenttree.tree('getChildren',node.target); if (childList && childList.length > 0) { $.each(childList,function(i,e){ if (checked) { currenttree.tree("check", e.target); zMapComPlugin.addMapPoint("vedioPointLayer",e.data,window.layerOptions[0]); } else { currenttree.tree("uncheck", e.target); zMapComPlugin.removeMapPoint("vedioPointLayer",e.data.id); } }) } } }
+						 */					
+						return;
+					}else if (type == "system"){
+						$('#rcmc_1').tree({
+							// url:window.WEB_ROOT_PATH + "/vedio/channel/tree2.json?sort=sortIndex%20code%20name&order=asc&content=" + encodeURI(content),
+							url: window.WEB_ROOT_PATH + "/system/selfOrg/selfOrgAndChannelTree.json?sort=sortIndex%20code%20name&order=asc&content=" + encodeURI(content),
+							checkbox: true,
+							onBeforeLoad: function () {
+								zMclPlugin.clearResult("clear");
+							},
+							onLoadSuccess: function (node, data) {
+								zMapComPlugin.treeTitle('rcmc_1', data);// 判断在线离线
+								nodes = [];
+								$(".tree-file").css({
+									"background-image": "url(../img/outline.png)",
+									"background-position": "0px 0px",
+									"filter": "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../img/outline.png',sizingMethod='scale')"
+								})
+								var child = $('#rcmc_1').tree('getChildren', data.target);
+								for (var i = 0; i < child.length; i++) {
+										if (child[i].type == "channel") {			
+										if (child[i].map.status == 1) {
+											$(child[i].target).find('.tree-file').css({
+												"background-image": "url(../img/online.png)",
+												"background-position": "0px 0px",
+												"background-size": "100%",
+												"filter": "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../img/online.png',sizingMethod='scale')"
+											})
+										}
+
+									} else if (child[i].type == "org") {
+										$(child[i].target).find("span.tree-icon").removeClass('tree-file').addClass('tree-folder');
+									}
+								}
+
+							},
+
+							onCheck: function (node, checked) {
+								zMapComPlugin.vedioTreeClick(node, checked);
+								nodes = $('#rcmc_1').tree('getChecked');
+								$(".tree-node").removeClass("ylf_check");
+								for (var i = 0; i < nodes.length; i++) {
+									$(nodes[i].target).addClass("ylf_check");
+								}
+								
+							},
+							onContextMenu: function (e, node) { // 给结点添加右键菜单
+								e.preventDefault(); // 阻止右键默认事件
+								// console.log($(e.target).parents(".tree-node").is(".ylf_check"))
+								if ($(e.target).parents(".tree-node").is(".ylf_check")) {
+									$('#parentNode').menu('show', {
+										left: e.pageX,
+										top: e.pageY
+									});
+								}
+							}
+						});
+						// 预览
+						$("#preview1").click(function () {							
+							zMapComPlugin.vedio_view1('playreal','hk',nodes);
+						})
+						// 回放
+							$("#back1").click(function () {
+								zMapComPlugin.vedio_view1('playback','hk',nodes);							
+						})
+
+						/*
+						 * // 异步加载 function append(args){ var node = $('#rcmc_1').tree('getSelected'); $('#rcmc_1').tree('append',{ parent: node.target, data:args }); var type = node.type; var currenttree = $("#rcmc_1"); if (type == "organization") { var childList = currenttree.tree('getChildren',node.target); if (childList && childList.length > 0) { $.each(childList,function(i,e){ if (checked) { currenttree.tree("check", e.target); zMapComPlugin.addMapPoint("vedioPointLayer",e.data,window.layerOptions[0]); } else { currenttree.tree("uncheck", e.target); zMapComPlugin.removeMapPoint("vedioPointLayer",e.data.id); } }) } } }
+						 */					
+						return;
+					};
+				}
+			},
+			vedio_view2: function (playtype, brand) {				
+				if (brand == null) {
+					alert("监控设备品牌不明确！");
+				}								
+				brand = brand.replace("channel-brand-", "");
+				var openUrl = window.WEB_ROOT_PATH + "/vedio/vedio.do?playtype=" + playtype + "&brand=" + brand// 弹出窗口的url
+				if (brand == "hk" || brand == "ys") {
+					window.open(openUrl, "");
+				}
+				/*
+				 * if (brand == "hk") { var iWidth=980; // 弹出窗口的宽度; var iHeight=520; // 弹出窗口的高度; if(playtype == "playreal" && brand == "hk"){ iWidth=760; // 弹出窗口的宽度; iHeight=500; // 弹出窗口的高度; }else if(playtype == "playview" && brand == "ys"){ iWidth=680; // 弹出窗口的宽度; iHeight=520; // 弹出窗口的高度; }else if(playtype == "playback" && brand == "hk"){ iWidth=800; // 弹出窗口的宽度; iHeight=520; // 弹出窗口的高度; } var iTop = (window.screen.availHeight-30-iHeight)/2; // 获得窗口的垂直位置; var iLeft = (window.screen.availWidth-10-iWidth)/2; // 获得窗口的水平位置; window.open(openUrl,"","height="+iHeight+", width="+iWidth+", top="+iTop+", left="+iLeft); } else if (brand == "ys") { window.open(openUrl,""); }
+				 */
+			},
+			
+			vedio_view1: function (playtype, brand, str) {			
+				var arr = str;
+				localStorage.removeItem('onePoint');
+				localStorage.removeItem('code');
+				localStorage.removeItem('back');
+				if (arr && arr.length > 0) {
+					if (playtype == "playreal" && brand == "hk") {				
+							this.vedio_view2(playtype, brand);
+							obj = JSON.stringify(arr);
+							localStorage.setItem("code",obj);
+							
+					} else if ((playtype == "playback" && brand == "hk")) {
+						// 不管是海康还是宇视 一个窗口都只回放一个
+							this.vedio_view2(playtype, brand);
+							obj = JSON.stringify(arr); 
+							localStorage.setItem("back",obj);							
+					}
+
+				} else {
+					$.messager.alert("没有选择监控！");
+					// this.hook.alert("没有选择监控！");
+				}
+		},				
+			getWalkie: function () {
+				// 对讲机
+				z.request({
+					url: window.WEB_ROOT_PATH + "/gps/patrolPerson/datagrid.json",
+					data: {
+						page: 1,
+						rows: 2000
+					},
+					success: function (args) {
+
+						if (args.total > 0) {
+							var dat = args.rows;
+							var pIcon = new Icon();
+							pIcon.image = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/walkie.png";
+							pIcon.topOffset = 0;
+							pIcon.leftOffset = 0;
+							if (typeof iPos == "undefined" || iPos == null)
+								iPos = 7;
+
+							var htm = "";
+
+							for (var i = 0, t = dat.length; i < t; i++) {
+								if (dat[i].lon != "" && dat[i].lon != 0 && dat[i].lat != "" && dat[i].lat != "0") {
+
+									var marker = new Marker(new Point(dat[i].lon, dat[i].lat), pIcon, (dat[i].patrolPersontName != null && dat[i].patrolPersontName != "" ? new Title(dat[i].patrolPersontName, 12, iPos, "宋体", null, null, "red", "2") : null));
+									var unitInfo = dat[i];
+									marker.code = unitInfo.deviceId;
+									marker.name = unitInfo.patrolPersontName;
+									marker.lon = unitInfo.lon;
+									marker.lat = unitInfo.lat;
+									marker.type = "Walkie";
+									z.plugin.PGisPlugin.instance.mapObj.addOverlay(marker, false);// 地图上撒点 并设置点 是否可以删除
+								}
+
+							}
+
+						}
+
+					}
+				});
+			},
+			getMonitoring: function () {
+				// 监控点
+				z.request({
+					url: window.WEB_ROOT_PATH + "/vedio/channel/datagrid.json",
+					data: {
+						page: 1,
+						rows: 2000
+					},
+					success: function (args) {
+						if (args.total > 0) {
+							var dat = args.rows;
+
+							var pIcon = new Icon();
+							pIcon.image = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio.png";
+							pIcon.topOffset = 0;
+							pIcon.leftOffset = 0;
+							// pIcon.height=32;//getMap().viewSize.height;
+							// pIcon.width=32;//getMap().viewSize.width;
+							if (typeof iPos == "undefined" || iPos == null)
+								iPos = 7;
+
+							var htm = "";
+
+							for (var i = 0, t = dat.length; i < t; i++) {
+								if (dat[i].lon != "" && dat[i].lon != 0 && dat[i].lat != "" && dat[i].lat != "0") {
+
+									var unitInfo = dat[i];
+									console.log(unitInfo);
+									var token = unitInfo.code;
+									var brand = unitInfo.monitorBrandCode.replace("channel-brand-", "");
+									/*
+									 * if(node.type == 'channel'){ document.getElementById('CameraIndexCode').value =node.id ; OnPlayback(); }
+									 */
+
+									var content = "<table style='width:256px;'><tr><th>编号</th><td>" + unitInfo.code + "</td></tr><tr><th>名称</th><td>" + unitInfo.name + "</td></tr><tr><th>经度</th><td>" + unitInfo.lon + "</td></tr><tr><th>纬度</th><td>" + unitInfo.lat + "</td></tr></table>" + "<div><a href='#' title='' class='tolh' onclick = \"z.plugin.MclPlugin.instance.vedio_view('" + (brand == "hk" ? "playreal" : "playview") + "','" + unitInfo.monitorBrandCode + "','" + token + "')\">视频预览</a>";
+									content += "&nbsp;&nbsp;<a href='#' title='' class='tolh' onclick = \"z.plugin.MclPlugin.instance.vedio_view('" + (brand == "hk" ? "playback" : "playback") + "','" + unitInfo.monitorBrandCode + "','" + token + "')\">视频回放</a></div>";
+
+									var marker = new Marker(new Point(dat[i].lon, dat[i].lat), pIcon, (dat[i].name != null ? new Title(dat[i].name, 12, iPos, "宋体", null, null, (unitInfo.status == "2" || unitInfo.status == "0" ? "red" : "#00FF00"), "2") : null));
+									marker.addListener("click", function () {
+										marker.openInfoWindowHtml(content)
+									});
+									marker.code = unitInfo.code;
+									marker.brand = unitInfo.monitorBrandCode;
+									marker.name = unitInfo.name;
+									marker.lon = unitInfo.lon;
+									marker.lat = unitInfo.lat;
+									marker.type = "Monitoring";
+									z.plugin.PGisPlugin.instance.mapObj.addOverlay(marker, false);// 地图上撒点 并设置点 是否可以删除
+								}
+
+							}
+
+						}
+
+					}
+				});
+			},
+			getBaseStation: function () {
+				// 基站
+				z.request({
+					url: window.WEB_ROOT_PATH + "/vedio/socialres/datagrid.json",
+					data: {
+						page: 1,
+						rows: 20,
+						DTYPE: 'SocialRes'
+					},
+					success: function (args) {
+						if (args.total > 0) {
+							var dat = args.rows;
+
+							var pIcon = new Icon();
+							pIcon.image = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/basestation.png";
+
+							if (typeof iPos == "undefined" || iPos == null)
+								iPos = 7;
+
+							var htm = "";
+
+							for (var i = 0, t = dat.length; i < t; i++) {
+								if (dat[i].lon != "" && dat[i].lon != 0 && dat[i].lat != "" && dat[i].lat != "0") {
+
+									var unitInfo = dat[i];
+									var token = unitInfo.code;
+									var brand = unitInfo.monitorBrandCode.replace("channel-brand-", "");
+									var content = "<table style='width:256px;'><tr><th>名称</th><td>" + unitInfo.name + "</td></tr><tr><th>经度</th><td>" + unitInfo.lon + "</td></tr><tr><th>纬度</th><td>" + unitInfo.lat + "</td></tr></table>";
+
+									var marker = new Marker(new Point(dat[i].lon, dat[i].lat), pIcon, (dat[i].name != null ? new Title(dat[i].name, 12, iPos, "宋体", null, null, (unitInfo.status == "2" || unitInfo.status == "0" ? "red" : "#00FF00"), "2") : null));
+									marker.addListener("click", function () {
+										marker.openInfoWindowHtml(content)
+									});
+
+									marker.name = unitInfo.name;
+									marker.lon = unitInfo.lon;
+									marker.lat = unitInfo.lat;
+									marker.type = "BaseStation";
+									z.plugin.PGisPlugin.instance.mapObj.addOverlay(marker, false);// 地图上撒点 并设置点 是否可以删除
+								}
+
+							}
+
+						}
+
+					}
+				});
+			},
+			initMapPoint: function (mapObj) {
+				// 给地图加点
+				if (mapObj != null) {
+					this.mapObj = mapObj;
+					mapObj.on("load", function () {
+						/*
+						 * 修改：初始化不加点 window.layerOptions = [ { name: "vedioPointLayer", text: "视频监控", url: window.WEB_ROOT_PATH + "/vedio/channel/datagrid.json", targetTable: "vedio", data: { fields: "id,name,lon,lat,code,monitorBrandCode", page: 1, rows: 2000 }, param: { x: "lon", y: "lat", id: "id", name: "name", targetId: "id", code:"code", monitorBrandCode:"monitorBrandCode" }, marker: { markerImgPath: window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio.png", markerImgW: 30, markerImgH: 30 }, attributes:{ brand:"" } }, { name: "Walkie", text: "对讲机", url: window.WEB_ROOT_PATH + "/gps/position/datagrid.json", targetTable: "Walkie", data: { fields: "id,lon,lat,deviceId,patrolPersontName", page: 1, rows: 2000 }, param: { x: "lon", y: "lat", id: "id", name: "patrolPersontName", targetId: "id" }, marker: { markerImgPath: window.WEB_ROOT_PATH + "/img/z-lyspjk/map/walkie.png", markerImgW: 30, markerImgH: 30 }, attributes:{ brand:"" } }, { name: "BaseStation", text: "基站", url: window.WEB_ROOT_PATH + "/vedio/socialres/datagrid.json", targetTable: "BaseStation", data: { fields: "id,name,lon,lat", page: 1, rows: 2000 }, param: { x: "lon", y: "lat", id: "id", name: "name", targetId: "id" }, marker: { markerImgPath: window.WEB_ROOT_PATH + "/img/z-lyspjk/map/basestation.png", markerImgW: 30, markerImgH: 30 }, attributes:{ brand:"" } } ];
+						 */
+						// zMapComPlugin.loadMapSuccess();
+						// zMapComPlugin.initLayerManagement();
+						// zMapComPlugin.getMapPoint(layerOptions[0]);
+					});
+					zMapComPlugin.loadMapSuccess();
+					// zMapComPlugin.initLayerManagement();
+					// 地图加载后，监听到鼠标移动或拖动事件
+					mapObj.on("mouse-move", setLatAndlon);
+					mapObj.on("mouse-drag", setLatAndlon);
+					// 显示坐标的回调函数，参数是evt
+					function setLatAndlon (evt) {
+						// 从事件中获取mapPoint
+						var mp = evt.mapPoint;
+						// 显示鼠标坐标
+						$("#mapLatitudeAndlongitude").html(" 经度：" + mp.x + ", 纬度：" + mp.y);
+					}
+
+					mapObj.on("zoom-end", function (evt) {
+						var zoom = hook.mapPlugin.getZoom();
+						$("#mapZoomSliderBar").slider("setValue", zoom);
+						if (hook.mapPlugin.curBgLayerIndex == 1) {
+							if (zoom > 18) {
+								alert("当前地图无" + zoom + "级数据，请切换其他风格地图");
+								// hook.mapPlugin.setZoom(18);
+							} else if (zoom < 7) {
+								alert("当前地图无" + zoom + "级数据，请切换其他风格地图");
+								hook.mapPlugin.setZoom(7);
+							}
+						} else if (hook.mapPlugin.curBgLayerIndex == 0) {
+							if (zoom > 17) {
+								hook.mapPlugin.setGbLayers(1);
+							}
+						}
+					});
+				}
+
+				// GPS定时器
+				zMapComPlugin.initGpsListener();
+
+				zMapComPlugin.getSearchdata();
+
+				// 设置直线查询配置
+				z.request({
+					url: window.WEB_ROOT_PATH + "/system/config/getLineExtent.json",
+					success: function (value) {
+						if (value || value != "") {
+							zMapComPlugin.meter = value;
+						} else {
+							zMapComPlugin.meter = 1000;
+						}
+					}
+				});
+			},
+			setCenter: function (lon, lat) {
+				// 搜索结果点击，图层未选中时选中该图层
+				/*
+				 * var searchVal = $('#map_query_type').val(); var layerName; if (searchVal == "event") { if (!($('#layersul').find('input[value="vedioPointLayer"]').prop("checked"))) { $('#layersul').find('input[value="vedioPointLayer"]').prop("checked",true); layerName = "vedioPointLayer"; } } else if (searchVal == "location") { if (!($('#layersul').find('input[value="Walkie"]').prop("checked"))) { $('#layersul').find('input[value="Walkie"]').prop("checked",true); layerName = "Walkie"; } } else if (searchVal == "BaseStation") { if (!($('#layersul').find('input[value="BaseStation"]').prop("checked"))) { $('#layersul').find('input[value="BaseStation"]').prop("checked",true); layerName = "BaseStation"; } }
+				 */
+				var mapPlugin = hook.mapPlugin;
+				if (lon != "" && lon != null && lat != "" && lat != null) {
+					var geoPoint = new esri.geometry.Point(lon, lat);
+
+					mapPlugin.setCenter(geoPoint, mapPlugin.getZoom());
+				}
+			},
+			// 初始化图层管理标签下拉选择
+			initLayerManagement: function () {
+				var ul = $(".tool-container>ul>li").children("ul#layersul");
+				ul.empty();
+				$.each(layerOptions, function (i, e) {
+					ul.append(makeLi(e));
+				});
+				function makeLi (options) {
+					var layer = mapPlugin.graphicsLayers[options.name];
+					var div = $("<div/>").html(options.text);
+					div.click(function () {
+						$(this).children("input").click();
+					});
+					var input = $("<input type=\"checkbox\" name=\"layers\" value=\"" + options.name + "\"/>");
+					input.click(function (e) {
+						e.stopPropagation();
+						layer = mapPlugin.graphicsLayers[options.name];
+						var flag = this.checked;
+						if (flag) {
+							this.checked = true;
+							if (layer) {
+								layer.show();
+								zMapComPlugin.getMapPoint.apply(window, [
+										options, options.success
+								]);
+							} else {
+								zMapComPlugin.getMapPoint.apply(window, [
+										options, options.success
+								]);
+							}
+						} else {
+							this.checked = false;
+							if (layer && layer.visible) {
+								layer.hide();
+							}
+						}
+					});
+					if (layer && layer.visible) {
+						input.attr("checked", true);
+					}
+					var li = $("<li/>").append(div.prepend(input));
+					return li;
+				}
+			},
+			// 地图打印功能
+			print: function (evt) {
+				// 初始化拦截打印请求，修改打印参数
+				esri.request.setRequestPreCallback(function (ioArgs) {
+
+					// 如果指定了打印范围，那么就修改打印请求中的参数值
+					if (ioArgs.content.Web_Map_as_JSON && evt) {
+
+						// 获取Web_Map_as_JSON参数
+						var preJSON = ioArgs.content.Web_Map_as_JSON;
+
+						// 把JSON字符串转换为JavaScript对象
+						var obj = JSON.parse(preJSON);
+
+						// 修改打印范围
+						obj.mapOptions.extent.xmax = evt.geometry.getExtent().xmax;
+						obj.mapOptions.extent.xmin = evt.geometry.getExtent().xmin;
+						obj.mapOptions.extent.ymax = evt.geometry.getExtent().ymax;
+						obj.mapOptions.extent.ymin = evt.geometry.getExtent().ymin;
+
+						// 移除mapOptons中的scale参数（如果指定打印模板，mapOptions中会有这个参数）
+						if (obj.mapOptions.scale) {
+							delete obj.mapOptions.scale;
+						}
+
+						// 修改输出的图片尺寸
+						obj.exportOptions.outputSize[1] = obj.exportOptions.outputSize[0] * (evt.geometry.getExtent().ymax - evt.geometry.getExtent().ymin) / (evt.geometry.getExtent().xmax - evt.geometry.getExtent().xmin);
+
+						// 移除存储extent要素的graphicslayer
+						var n = obj.operationalLayers.length;
+						obj.operationalLayers.pop();
+
+						// 将JavaScript对象序列化为一个JSON字符串
+						ioArgs.content.Web_Map_as_JSON = JSON.stringify(obj);
+
+					}
+
+					return ioArgs;
+				});
+
+				// 创建print控件
+				mapPlugin.print();
+
+			},
+			// 设置监控点信息模板属性（文字标题颜色，摄像头状态）
+			setColorAndStstusName: function (layerName, data, node, rows) {
+				if (layerName == "vedioPointLayer") {
+					node.attributes.htmlColor = "#00BFFF";
+					if (typeof (data.status) != "undefined" && data.monitorBrandCode) {
+						if (data.status == "1") {
+							node.attributes.htmlColor = "#00FF00";
+							data.status = "在线";
+						} else if (data.status == "0" || data.status == "2") {
+							node.attributes.htmlColor = "#ff0000";
+							data.status = "离线";
+						} else {
+							data.status = "";
+						}
+					} else {
+						data.status = "";
+					}
+					/*
+					 * return; // 设置摄像头的种类图片， node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio.png"; if (data.monitorCategoryName && data.monitorCategoryName != "") { if (data.monitorCategoryName == "带云台枪机" || data.monitorCategoryName == "标清云台摄像机" || data.monitorCategoryName == "高清云台摄像机") {// 枪机式摄像头图片的旋转角度 if (typeof(data.angle) != "undefined") { if (data.angle >= 0 && data.angle <= 45) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/gun/rotation_gun_vedio1.png"; } else if (data.angle > 45 && data.angle <= 135) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/gun/rotation_gun_vedio2.png"; } else if (data.angle > 135 && data.angle <= 225) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/gun/rotation_gun_vedio3.png"; } else if (data.angle > 225 && data.angle <= 315) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/gun/rotation_gun_vedio4.png"; } else if (data.angle > 315 && data.angle <= 360) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/gun/rotation_gun_vedio1.png"; } } } else if (data.monitorCategoryName == "球机" || data.monitorCategoryName == "快球") {// 球机式机式摄像头图片的旋转角度 if (typeof(data.angle) != "undefined") { if (data.angle >= 0 && data.angle <= 45) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/ball/rotation_ball_vedio1.png"; } else if (data.angle > 45 && data.angle <= 135) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/ball/rotation_ball_vedio2.png"; } else if (data.angle > 135 && data.angle <= 225) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/ball/rotation_ball_vedio3.png"; } else if (data.angle > 225 && data.angle <= 315) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/ball/rotation_ball_vedio4.png"; } else if (data.angle > 315 && data.angle <= 360) { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/ball/rotation_ball_vedio1.png"; } } } else if (data.monitorCategoryName == "半球") {// 半球式机式摄像头图片 node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/half_ball_vedio.png"; } else if (data.monitorCategoryName == "标清固定摄像机" || data.monitorCategoryName == "高清固定摄像机" || data.monitorCategoryName == "枪机" || data.monitorCategoryName == "虚拟摄像机" || data.monitorCategoryName == "变焦枪机") {// node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/gun_vedio.png"; } else if (data.monitorCategoryName == "车载摄像机") {// 车载摄像机 node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/car_vedio.png"; } else if (data.monitorCategoryName == "DVI输入摄像机" || data.monitorCategoryName == "VGA输入摄像机" || data.monitorCategoryName == "DVR安全接入摄像机" || data.monitorCategoryName == "VM安全接入摄像机" || data.monitorCategoryName == "矩阵安全接入摄像机") { node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/vedio/dvi_vedio.png"; } }
+					 */
+				} else if (layerName == "Walkie") {// 设置对讲机在线离线
+					node.attributes.htmlColor = "#FF0000";
+					if (data && data.gpsTime && data.gpsTime != "" && data.backTime && data.backTime != "") {
+						var gpsTime = new Date(data.gpsTime);
+						var backTime = new Date(data.backTime);
+						var backAfterTime = new Date(backTime.getTime() - 5 * 60 * 1000);
+						if (backTime > gpsTime && gpsTime > backAfterTime) {
+							node.attributes.htmlColor = "#00FF00";
+						}
+					}
+					/*
+					 * if (rows) { if (rows.length > 0) { for (var i=0;i<rows.length;i++) { if (rows[i].deviceId == data.id) { node.attributes.htmlColor = "#00FF00"; break; } } } }
+					 */
+				}
+			},
+			// 搜索点击加载点位
+			getSearchPointMap: function () {
+				var content = $("#map_query_content").val();
+				// var type = $("#map_query_type").val();
+				var type = $("#map_query_type").find("div").attr("class");
+				// 搜索框未输入，不执行
+				/*
+				 * if (!(content)) { return; }
+				 */
+				var laryerParams = {};
+				// 判断点是否已加载
+				var layerName = "";
+				if (type == "event") {
+					layerName = "vedioPointLayer";
+					var URL = window.WEB_ROOT_PATH + "/vedio/channel/datagrid.json?sort=name&order=desc&page=1&rows=2000&content=" + encodeURI(content);
+					$.extend(true, laryerParams, layerOptions[0]);
+				} else if (type == "location") {
+					layerName = "Walkie";
+					var URL = window.WEB_ROOT_PATH + "/gps/patrolPerson/datagrid.json?sort=insertTime&order=desc&page=1&rows=2000&content=" + encodeURI(content);
+					$.extend(true, laryerParams, layerOptions[1]);
+				} else if (type == "BaseStation") {
+					layerName = "BaseStation";
+					var URL = window.WEB_ROOT_PATH + "/vedio/socialres/datagrid.json?sort=name&order=desc&page=1&rows=2000&content=" + encodeURI(content);
+					$.extend(true, laryerParams, layerOptions[2]);
+				} else if (type == "MACAddress") {
+					layerName = "MACAddress";
+					var URL = window.WEB_ROOT_PATH + "/vedio/macaddress/datagrid.json?sort=name&order=desc&page=1&rows=2000&content=" + encodeURI(content);
+					$.extend(true, laryerParams, layerOptions[3]);
+				} else if (type == "vehicle4G") {
+					layerName = "vehicle4G";
+					var URL = window.WEB_ROOT_PATH + "/vedio/vehicle4G/datagrid.json?sort=name&order=desc&page=1&rows=2000&content=" + encodeURI(content);
+					$.extend(true, laryerParams, layerOptions[4]);
+				}
+				if (layerName == "" && !URL) {
+					return;
+				}
+				// 清除未选择图层
+				var layers = [
+						"vedioPointLayer", "Walkie", "BaseStation", "MACAddress"
+				];
+				for (var i = 0; i < layers.length; i++) {
+					if (layers[i] == layerName) {
+
+					} else {
+						if (mapPlugin.graphicsLayers[layers[i]]) {
+							mapPlugin.removeGraphics(layers[i]);
+							mapPlugin.graphicsLayers[layers[i]].hide();
+						}
+					}
+				}
+				// 根据区域加载清除点
+				if (layerName != "" && mapPlugin.graphicsLayers[layerName]) {
+					var layer = mapPlugin.graphicsLayers[layerName];
+					if (layer) {
+						var Xmin = mapObj.extent.xmin;
+						var Xmax = mapObj.extent.xmax;
+						var Ymin = mapObj.extent.ymin;
+						var Ymax = mapObj.extent.ymax;
+						var graphics = layer.graphics;
+						for (var i = graphics.length, l = 0; i >= l; i--) {
+							if (graphics[i] && graphics[i].geometry) {
+								var x = graphics[i].geometry.x;
+								var y = graphics[i].geometry.y;
+								if (x > Xmin && x < Xmax && y > Ymin && y < Ymax) {
+								} else {
+									mapPlugin.removeGraphic(graphics[i]);
+								}
+							}
+						};
+					}
+				}
+				laryerParams.url = URL;
+				zMapComPlugin.getMapPoint(laryerParams);
+				/*
+				 * if (layerName == "Walkie") { zMapComPlugin.getMapPoint(laryerParams); } else { zMapComPlugin.getMapPoint(laryerParams); }
+				 */
+			},
+			// 图层管理加载对应图层和图层上的点
+			addLayer: function (checked, layerName) {
+				if (layerName == "vedioPointLayer") {
+					options = layerOptions[0];
+				} else if (layerName == "Walkie") {
+					options = layerOptions[1];
+				} else if (layerName == "BaseStation") {
+					options = layerOptions[2];
+				} else if (layerName == "MACAddress") {
+					options = layerOptions[3];
+				} else if (layerName == "vehicle4G") {
+					options = layerOptions[4];
+				} else if (layerName == "jjdPointLayer") {
+					options = layerOptions[5];
+					if (checked) {
+						zMapComPlugin.showJjdSelectView();
+					}
+				} else {
+					return;
+				}
+				layer = mapPlugin.graphicsLayers[options.name];
+				if (checked) {
+					if (layer) {
+						layer.show();
+						// 加载已删除的点
+						zMapComPlugin.getMapPoint.apply(window, [
+								options, options.success
+						]);
+						/*
+						 * if (options.name == "Walkie") { zMapComPlugin.getMapPoint.apply(window,[options,options.success]); } else { zMapComPlugin.getMapPoint.apply(window,[options,options.success]); }
+						 */
+					} else {
+						if (options.name == "jjdPointLayer") {
+							return;
+						} else {
+							zMapComPlugin.getMapPoint.apply(window, [
+									options, options.success
+							]);
+						}
+						/*
+						 * if (options.name == "Walkie") { zMapComPlugin.getMapPoint.apply(window,[options,options.success]); } else if (options.name == "jjdPointLayer") { return; } else { zMapComPlugin.getMapPoint.apply(window,[options,options.success]); }
+						 */
+					}
+				} else {
+					// 未选中则清除该图层上的点，隐藏图层
+					mapPlugin.removeGraphics(options.name);
+					// 移除信息模板
+					hook.mapPlugin.hideInfoTemplate();
+					if (layer && layer.visible) {
+						layer.hide();
+					}
+				}
+			},
+			pointUpdateSave: function (data) {
+				var dialogdiv = $("#markerInMapDialog");
+				dialogdiv.dialog("close");
+				var obj = $(dialogdiv.data("obj"))[0];
+				if (data.x != "" && data.y != "" && data.layername != "") {
+					// 保存点
+					obj.lon = data.x;
+					obj.lat = data.y;
+					delete obj["insertTime"];
+					delete obj["updateTime"];
+					if (obj.organization) {
+						delete obj["organization"];
+					}
+					if (data.layername == "vedioPointLayer") {
+						z.request({
+							url: window.WEB_ROOT_PATH + "/vedio/channel/save.json",
+							data: obj,
+							success: function () {
+							}
+						});
+					} else if (data.layername == "BaseStation") {
+						z.request({
+							url: window.WEB_ROOT_PATH + "/vedio/socialres/save.json",
+							data: obj,
+							success: function () {
+							}
+						});
+					}
+
+					// 更新点
+					zMapComPlugin.movePointTwo(data.layername, obj);
+				}
+
+			},
+			// 数据导出方法
+			videoDataExport: function (type) {
+				var list = new Array();
+				var PARAMS = {}; // post请求参数
+				if (type == "video") {
+					$(".zhxy-dialog-body .bodylist").each(function () {
+						var textName = $(this).find(".text_name").html();
+						var numShebei = $(this).find(".num_shebei").html();
+						var code = $(this).find("[name=code]").val();
+						var lon = $(this).find("[name=lon]").val();
+						var lat = $(this).find("[name=lat]").val();
+						if (typeof (textName) != "undefined" && typeof (numShebei) != "undefined" && typeof (code) != "undefined" && typeof (lon) != "undefined" && typeof (lat) != "undefined") {
+							var data = code + "___" + textName + "___" + lon + "___" + lat + "___" + numShebei;
+							list.push(data);
+						}
+					});
+					var dataValues = list.join(",");
+					if (dataValues == "") {
+						$.messager.alert('提示', '未选择视频监控数据!');
+						return;
+					}
+					PARAMS = {
+						"tableName": "视频监控数据",
+						"tableHeardName": "摄像头数据",
+						"tableTitle": [
+								"序号", "编号", "名称", "经度", "纬度", "品牌"
+						].join(","),
+						"dataValues": dataValues
+					}
+				} else if (type == "walkie") {
+					$(".zhxy-dialog-body .walkie_bodylist").each(function () {
+						var name = $(this).find(".walkie_name_text").html();
+						var lon = $(this).find(".walkie_lon_text").html();
+						var lat = $(this).find(".walkie_lat_text").html();
+						if (typeof (name) != "undefined" && typeof (lon) != "undefined" && typeof (lat) != "undefined") {
+							var data = (name == "&nbsp;" ? "" : name) + "___" + lon + "___" + lat;
+							list.push(data);
+						}
+					});
+					var dataValues = list.join(",");
+					if (dataValues == "") {
+						$.messager.alert('提示', '未选择对讲机数据!');
+						return;
+					}
+					PARAMS = {
+						"tableName": "对讲机数据",
+						"tableHeardName": "对讲机数据",
+						"tableTitle": [
+								"序号", "持有人", "经度", "纬度"
+						].join(","),
+						"dataValues": dataValues
+					}
+				} else if (type == "baseStation") {
+					$(".zhxy-dialog-body .walkie_bodylist").each(function () {
+						var name = $(this).find(".baseStation_name_text").html();
+						var unit = $(this).find(".baseStation_unit_text").html();
+						var lon = $(this).find("[name=lon]").val();
+						var lat = $(this).find("[name=lat]").val();
+						if (typeof (name) != "undefined" && typeof (unit) != "undefined" && typeof (lon) != "undefined" && typeof (lat) != "undefined") {
+							var data = name + "___" + unit + "___" + lon + "___" + lat;
+							list.push(data);
+						}
+					});
+					var dataValues = list.join(",");
+					if (dataValues == "") {
+						$.messager.alert('提示', '未选择基站数据!');
+						return;
+					}
+					PARAMS = {
+						"tableName": "基站数据",
+						"tableHeardName": "基站数据",
+						"tableTitle": [
+								"序号", "名称", "基站类型", "经度", "纬度"
+						].join(","),
+						"dataValues": dataValues
+					}
+				}
+
+				// get请求参数限制，发送post请求
+				var temp = document.createElement("form");
+				temp.action = "../vedio/channel/exportExcel.do";
+				temp.method = "post";
+				temp.style.display = "none";
+				for ( var x in PARAMS) {
+					var opt = document.createElement("textarea");
+					opt.name = x;
+					opt.value = PARAMS[x];
+					temp.appendChild(opt);
+				}
+				document.body.appendChild(temp);
+				temp.submit();
+			},
+			getMoveGps: function (options) {// 获取一个小时内移动过的对讲机
+				if (options.name == "Walkie") {
+					var StartData = new Date(new Date().getTime() - 1 * 60 * 60 * 1000);
+					var timeStart = StartData.getFullYear() + '-' + (StartData.getMonth() + 1) + '-' + StartData.getDate() + ' ' + StartData.getHours() + ':' + StartData.getMinutes() + ':' + StartData.getSeconds();
+					var StopDate = new Date();
+					var timeStop = StopDate.getFullYear() + '-' + (StopDate.getMonth() + 1) + '-' + StopDate.getDate() + ' ' + StopDate.getHours() + ':' + StopDate.getMinutes() + ':' + StopDate.getSeconds();
+					z.request({
+						url: window.WEB_ROOT_PATH + "/gps/position/datagrid.json?gpsTimeStart=" + timeStart + "&gpsTimeStop=" + timeStop,
+						data: {
+							page: 1,
+							rows: 2000
+						},
+						success: function (args) {
+							rows = args.rows;
+							options.rows = rows;
+						},
+						complete: function (XMLHttpRequest) {
+							if (XMLHttpRequest.readyState == 4) {
+								zMapComPlugin.getMapPoint.apply(window, [
+										options, options.success
+								]);
+							}
+						},
+					}, true);
+				}
+			},
+			pictureOffset: function (layerName, data, flag) {// 解决图片重叠的问题
+				var DataX;
+				var DataY;
+				if (data.dataX) {
+					DataX = data.dataX;
+				} else {
+					DataX = data.x;
+				}
+				if (data.dataY) {
+					DataY = data.dataY;
+				} else {
+					DataY = data.y;
+				}
+				if (!layerName || typeof (DataX) == "undefined" || typeof (DataY) == "undefined" || !flag) {
+					return;
+				}
+				layer = mapPlugin.graphicsLayers[layerName];
+				if (!layer) {
+					return;
+				}
+				var graphics = layer.graphics;
+				if (graphics.length < 1) {
+					return;
+				}
+				for (var i = 0; i < graphics.length; i++) {
+					var geoX = graphics[i].geometry.x;
+					var geoy = graphics[i].geometry.y;
+					var Xmax = geoX > DataX ? geoX : DataX;
+					var Ymax = geoy > DataY ? geoy : DataY;
+					if (Xmax - geoX < 0.0003 && Xmax - DataX < 0.0003 && Ymax - geoy < 0.0002 && Ymax - DataY < 0.0002) {
+						data.dataX = DataX + (flag * 0.0001);
+						data.dataY = DataY + (flag * 0.00005);
+						zMapComPlugin.pictureOffset(layerName, data, 1);// 避免图片偏移后又与另一张图片重叠
+						break;
+					}
+				}
+			},
+			// 移动点位的方法2(需要更新点的图层名，更新的点位数据)
+			movePointTwo: function (layerName, data, gpslx) {
+				if (!layerName || !data || !data.lon || !data.lat) {
+					return;
+				}
+				var signId;
+				if (layerName == "Walkie") {
+					signId = data.deviceId;
+				} else {
+					signId = data.id;
+				}
+				if (!signId) {
+					return;
+				}
+				var graphics = mapPlugin.graphicsLayers[layerName].graphics;
+				if (!graphics || graphics.length <= 0) {
+					return;
+				}
+				// 移除信息模板
+				hook.mapPlugin.hideInfoTemplate();
+				// 移除点
+				var flag = 0;
+				var graphic;
+				for (var i = graphics.length - 1, l = 0; i >= l; i--) {
+					if (flag >= 2) {
+						break;
+					}
+					if (graphics[i].id) {
+						if (graphics[i].id == signId) {
+							graphic = graphics[i];
+							mapPlugin.graphicsLayers[layerName].remove(graphics[i]);
+							flag++;
+						}
+					} else if (graphics[i].textId) {
+						if (graphics[i].textId == signId) {
+							mapPlugin.graphicsLayers[layerName].remove(graphics[i]);
+							flag++;
+						}
+					}
+				}
+				if (!graphic) {
+					return;
+				}
+				// 添加点
+				var node = {
+					attributes: {
+						htmlColor: "#00BFFF",
+						markerImgH: 30,
+						markerImgPath: undefined,
+						markerImgW: 30
+					},
+					text: undefined
+				};
+				var point = {
+					angle: data.alt,
+					code: data.code,
+					id: data.id,
+					monitorBrandCode: data.monitorBrandCode,
+					monitorCategoryName: data.monitorCategoryName,
+					name: data.name,
+					status: data.status,
+					targetId: data.id,
+					targetTable: undefined,
+					x: data.lon,
+					y: data.lat
+				};
+				if (layerName == "vedioPointLayer") {
+					node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/event4.png";
+					node.attributes.markerImgW = 20;
+					node.attributes.markerImgH = 20;
+					node.text = "vedioPointLayer";
+					point.targetTable = "vedio";
+				} else if (layerName == "Walkie") {
+					point.id = data.deviceId;
+					point.targetId = data.deviceId;
+					node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/walkie.png";
+					node.text = "Walkie";
+					point.targetTable = "Walkie";
+				} else if (layerName == "BaseStation") {
+					node.attributes.markerImgPath = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/basestation.png";
+					node.text = "BaseStation";
+					point.targetTable = "BaseStation";
+				} else if (layerName == "MACAddress") {
+					node.attributes = {};
+					node.text = "MACAddress";
+					point.targetTable = "MACAddress";
+				} else {
+					return;
+				}
+				zMapComPlugin.setColorAndStstusName(layerName, point, node, []);
+				zMapComPlugin.pictureOffset(layerName, point, 1);
+				if (layerName == "Walkie") { // 对讲机标题颜色设置
+					if (typeof (data.lon) != "undefined" && typeof (data.lat) != "undefined") {
+						node.attributes.htmlColor = "#00FF00";
+						// 更新坐标gps name为空
+						point.name = graphic.name;
+						// 设置GPS在线离线
+						if (gpslx) {
+							node.attributes.htmlColor = "#FF0000";
+						}
+						/*
+						 * var StartData = new Date(new Date().getTime() - 1 * 60 * 60 * 1000); var gpsTime = new Date(data.gpsTime); if (gpsTime > StartData) { node.attributes.htmlColor = "#00FF00"; } else { node.attributes.htmlColor = "#FF0000"; }
+						 */
+					}
+				}
+				var g = zMclPlugin.addGeometryTypes(node, point, false);
+			},
+			// 定时更新GPS在线离线
+			initGpsListener: function () {
+				var gpsTimer = setInterval(function () {
+					var date = new Date();
+					console.log("GPS定时器执行=====================当前时间：" + (date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate() + " " + date.getHours() + ':' + date.getMinutes() + ':' + date.getSeconds()) + "=========================");
+					layer = mapPlugin.graphicsLayers["Walkie"];
+					if (layer) {
+						var graphics = layer.graphics;
+						if (graphics && graphics.length > 0) {
+							for (var i = graphics.length - 1; i >= 0; i--) {
+								var addT = graphics[i].addTime;
+								var nowT = new Date();
+								var fiveAfterT = new Date(nowT.getTime() - 5 * 60 * 1000);
+								if (addT && fiveAfterT > addT) {
+									var date = {
+										deviceId: graphics[i].id,
+										lon: graphics[i].lon,
+										lat: graphics[i].lat
+									}
+									zMapComPlugin.movePointTwo("Walkie", date, true);
+								}
+							}
+						}
+					}
+				}, 30000);
+			},
+			// gps轨迹查询
+			gpsTrajectorySeach: function (deviceId) {
+				mapPlugin.hideInfoTemplate();
+				var div1 = $("#gpsTrajectorySeachDialog_id");
+				var startTime = div1.find("input[name=startTime]").val();
+				var stopTime = div1.find("input[name=stopTime]").val();
+				z.request({
+					url: window.WEB_ROOT_PATH + "/gps/positionHis/datagrid.json?sort=insertTime&order=desc&page=1&rows=2000&gpsTimeStart=" + startTime + "&gpsTimeStop=" + stopTime + "&deviceId=" + deviceId,
+					success: function (args) {
+						mapPlugin.removeGraphics("gpsTrajectorySeachLayer");
+						var rows = args.rows;
+						if (rows.length == 0) {
+							$.messager.alert('提示', '未获取到该GPS的轨迹信息！');
+							return;
+						}
+						var pathArray = [];
+						var paths = [];
+						var j = 0;
+						// 封装多段线数据
+						for (var i = rows.length - 1; i >= 0; i--) {
+							if (rows[i].lon && rows[i].lat) {
+								pathArray[j++] = [
+										rows[i].lon, rows[i].lat
+								];
+							}
+						}
+						var lineSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new esri.Color([
+								0, 255, 0
+						]), 4);
+						paths[0] = pathArray;
+						geometry = new esri.geometry.Polyline({
+							"paths": paths,
+							"spatialReference": mapPlugin.mapObj.spatialReference
+						})
+						graphic = new esri.Graphic(geometry, lineSymbol);
+
+						// 重新设置地图中心点和地图显示范围
+						mapPlugin.setCenter(geometry.getExtent().getCenter());
+						mapPlugin.mapObj.setExtent(geometry.getExtent(), true);
+						// 添加路线
+						mapPlugin.addGraphic("gpsTrajectorySeachLayer", graphic);
+						// 添加起点和终点图标
+						var flag = paths[0].length;
+						if (flag >= 2 && paths[0][0][0] && paths[0][0][1] && paths[0][flag - 1][0] && paths[0][flag - 1][1]) {
+							var pointStyle = {
+								"url": window.WEB_ROOT_PATH + "/img/z-lyspjk/map/map_start.png",
+								"height": 23,
+								"width": 23,
+								"xoffset": 0,
+								"yoffset": 12
+							};
+							var startPoint = {
+								"x": paths[0][0][0],
+								"y": paths[0][0][1],
+								"spatialReference": mapPlugin.mapObj.spatialReference
+							};
+							mapPlugin.addPoint("gpsTrajectorySeachLayer", startPoint, pointStyle);
+							pointStyle.url = window.WEB_ROOT_PATH + "/img/z-lyspjk/map/map_stop.png"
+							var stopPoint = {
+								"x": paths[0][flag - 1][0],
+								"y": paths[0][flag - 1][1],
+								"spatialReference": mapPlugin.mapObj.spatialReference
+							};
+							mapPlugin.addPoint("gpsTrajectorySeachLayer", stopPoint, pointStyle);
+						}
+					}
+				});
+			},
+			// 警情图层选择页面
+			showJjdSelectView: function () {
+				var dialog = $("#JjdSelectViewId");
+				// 查询
+				dialog.find(".z-dialog-seach").click(function () {
+					if (dialog.find(".z-list-view-form").form('validate')) {
+						mapPlugin.removeGraphics("jjdPointLayer");
+
+						// 获取参数
+						var start = dialog.find("input[name=updateTimeStart]").val();
+						var stop = dialog.find("input[name=updateTimeStop]").val();
+						var jjdwdm = dialog.find("input[name=jjdwdm]").val();
+						var bjlbdm = dialog.find("input[name=jqlb]").val();
+						var bjlxdm = dialog.find("input[name=jqlx]").val();
+
+						var jjdLayer = window.layerOptions[5];
+						jjdLayer.url = window.WEB_ROOT_PATH + "/caseinfo/jjd/mapJjdSeachDatagrid.json", jjdLayer.data.startTime = start;
+						jjdLayer.data.endTime = stop;
+						jjdLayer.data.jjdwdm = jjdwdm;
+						jjdLayer.data.bjlbdm = bjlbdm;
+						jjdLayer.data.bjlxdm = bjlxdm;
+
+						zMapComPlugin.getMapPoint.apply(window, [
+								jjdLayer, jjdLayer.success
+						]);
+						dialog.dialog("close");
+					}
+				});
+				// 关闭
+				dialog.find(".z-dialog-close").click(function () {
+					dialog.dialog("close");
+				});
+				dialog.dialog("open");
+
+				// 初始化警情类别下拉框
+				$("#jqlb_div").empty();
+				$("#jqlb_div").html("<input id='jqlb_id' name='jqlb' />");
+				var jqlb = dialog.find("input[name=jqlb]");
+				jqlb.combobox({
+					url: window.WEB_ROOT_PATH + '/caseinfo/jjd/getBjlbCombobox.json',
+					valueField: 'bjlbdm',
+					textField: 'bjlbmc',
+					onChange: function (bjlbdm) {
+						initJqdl(bjlbdm);
+						/* initJqxl(); */
+					}
+				});
+				initJqdl();
+				/* initJqxl(); */
+				// 初始化警情类型
+				function initJqdl (code) {
+					if (code) {
+						$("#jqlx_div").empty();
+						$("#jqlx_div").html("<input id='jqlx_id' name='jqlx' />");
+						var jqdl = dialog.find("input[name=jqlx]");
+						jqdl.combobox({
+							url: window.WEB_ROOT_PATH + '/caseinfo/jjd/getBjlxByBjlbCode.json?bjlb=' + code,
+							valueField: 'bjlxdm',
+							textField: 'bjlxmc',
+							onChange: function (bjlxdm) {
+								/* initJqxl(code); */
+							}
+						});
+					} else {
+						$("#jqxl_div").empty();
+						$("#jqlx_div").html("<input id='jqlx_id' name='jqlx' />");
+						var jqdl = dialog.find("input[name=jqlx]");
+						jqdl.textbox({});
+					}
+				}
+				// 初始化警情细类
+				/*
+				 * function initJqxl(code) { if (code) { $("#jqxl_div").empty(); $("#jqxl_div").html("<input id='jqxl_id' name='jqxl' />"); var jqxl = dialog.find("input[name=jqxl]"); jqxl.combobox({ url:window.WEB_ROOT_PATH + '/caseinfo/fkd/getFklxByFklbCode.json?code=' + code, valueField:'code', textField:'name' }); } else { $("#jqxl_div").empty(); $("#jqxl_div").html("<input id='jqxl_id' name='jqxl' />"); var jqxl = dialog.find("input[name=jqxl]"); jqxl.textbox({}); } }
+				 */
+			},
+			addMapPoint: function (layername, data, options) {
+				if (options && layername && data && data.id && data.lon && data.lat) {
+					// 1.判断该点是否存在
+					var layer = mapPlugin.graphicsLayers[layername];
+					if (layer) {
+						layer.show();
+						var graphic = layer.graphics;
+						if (graphic) {
+							for (var i = 0, l = graphic.length; i < l; i++) {
+								if (graphic[i] && graphic[i].geometry) {
+									var gg = graphic[i];
+									if (gg.id == data.id) {
+										return;
+									}
+								}
+							}
+						}
+					}
+
+					// 2.初始化加点属性
+					var node = {};
+					node.text = options.name;
+					node.attributes = options.marker ? options.marker : {};
+
+					var dOption = {
+						x: "x",
+						y: "y",
+						id: "id",
+						name: "name",
+						targetId: "id",
+						code: "code",
+						monitorBrandCode: "monitorBrandCode",
+						status: "status", // 添加状态
+						monitorCategoryName: "monitorCategoryName",
+						alt: "alt",
+						gpsTime: "gpsTime"
+					}
+					$.extend(true, dOption, options.param);
+					var data = {
+						x: data[dOption.x],
+						y: data[dOption.y],
+						id: data[dOption.id],
+						name: data[dOption.name],
+						targetTable: options.targetTable,
+						targetId: data[dOption.targetId],
+						code: data[dOption.code],
+						monitorBrandCode: data[dOption.monitorBrandCode],
+						status: data[dOption.status],
+						monitorCategoryName: data[dOption.monitorCategoryName],
+						angle: data[dOption.alt],
+						gpsTime: data[dOption.gpsTime]
+					}
+					// 3.zMclPlugin.addGeometryTypes加点,保证地图点唯一
+					zMapComPlugin.setColorAndStstusName(options.name, data, node, []);
+					zMapComPlugin.pictureOffset(options.name, data, 1);
+					var g = zMclPlugin.addGeometryTypes(node, data, false);
+				}
+			},
+			removeMapPoint: function (layerName, signId) {
+				if (layerName && signId) {
+					var layer = mapPlugin.graphicsLayers[layerName];
+					if (layer) {
+						var graphics = layer.graphics;
+						if (graphics || graphics.length > 0) {
+							hook.mapPlugin.hideInfoTemplate();
+							var flag = 0;
+							for (var i = graphics.length - 1, l = 0; i >= l; i--) {
+								if (flag >= 2) {
+									break;
+								}
+								if (graphics[i].id) {
+									if (graphics[i].id == signId) {
+										mapPlugin.graphicsLayers[layerName].remove(graphics[i]);
+										flag++;
+									}
+								} else if (graphics[i].textId) {
+									if (graphics[i].textId == signId) {
+										mapPlugin.graphicsLayers[layerName].remove(graphics[i]);
+										flag++;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+		});
+		z.getInstance("z.plugin.MapComPlugin", null, "zMapComPlugin");
+	}
+})(window, z, z.plugin, $);
